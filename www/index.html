@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta http-equiv="Content-Security-Policy" content="default-src * data:; style-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval'">
+    
+    <title>ChronoSystem Navi V2</title>
+
+    <!-- Onsen UI CSS -->
+    <link rel="stylesheet" href="lib/onsenui/css/onsenui.css">
+    <link rel="stylesheet" href="lib/onsenui/css/onsen-css-components.css">
+    <!-- 自作CSS -->
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- Onsen UI JS -->
+    <script src="lib/onsenui/js/onsenui.min.js"></script>
+    <!-- PapaParse (CSV読み込み用) -->
+    <script src="components/papaparse/papaparse.min.js"></script>
+    <!-- Cordova -->
+    <script src="cordova.js"></script>
+    <!-- アプリ本体のJS -->
+    <script src="js/app.js"></script>
+</head>
+<body>
+
+    <!-- 画面遷移を管理するナビゲーター -->
+    <ons-navigator id="myNavigator" page="top.html"></ons-navigator>
+
+    <!-- ▼▼▼ 共通フッター（再生操作用） ▼▼▼ -->
+    <ons-bottom-toolbar id="bottom-toolbar" class="bottom-controls">
+        <div class="bottom-controls-left">
+            <ons-button id="volume-down-button" modifier="quiet"><ons-icon icon="fa-volume-down" size="20px"></ons-icon></ons-button>
+            <ons-button id="volume-up-button" modifier="quiet"><ons-icon icon="fa-volume-up" size="20px"></ons-icon></ons-button>
+        </div>
+        <div class="bottom-controls-center">
+            <ons-button id="rewind-button" modifier="quiet"><ons-icon icon="fa-backward" size="20px"></ons-icon></ons-button>
+            <ons-button id="stop-button" modifier="quiet"><ons-icon icon="fa-stop" size="20px"></ons-icon></ons-button>
+            <ons-button id="forward-button" modifier="quiet"><ons-icon icon="fa-forward" size="20px"></ons-icon></ons-button>
+        </div>
+        <div id="reservation-button-container" class="bottom-controls-right">
+            <!-- 予約ボタン等はJSで制御 -->
+        </div>
+    </ons-bottom-toolbar>
+
+    <!-- ▼▼▼ トップ画面（デザイン完全刷新） ▼▼▼ -->
+    <template id="top.html">
+        <ons-page id="top-page">
+            <ons-toolbar>
+                <div class="center">ChronoSystem Navi</div>
+                <div class="right">
+                    <ons-toolbar-button id="btn-settings">
+                        <ons-icon icon="fa-cog"></ons-icon>
+                    </ons-toolbar-button>
+                </div>
+            </ons-toolbar>
+            
+            <div class="home-container">
+                <!-- セクション1: メイン検索 -->
+                <div class="home-section-title">さがす</div>
+                <div class="home-grid-main">
+                    <div class="home-card search-card" data-search-type="song_title">
+                        <div class="card-icon"><ons-icon icon="fa-music"></ons-icon></div>
+                        <div class="card-label">曲名</div>
+                    </div>
+                    <div class="home-card search-card" data-search-type="artist">
+                        <div class="card-icon"><ons-icon icon="fa-microphone"></ons-icon></div>
+                        <div class="card-label">歌手名</div>
+                    </div>
+                    <div class="home-card search-card" data-search-type="keyword">
+                        <div class="card-icon"><ons-icon icon="fa-search"></ons-icon></div>
+                        <div class="card-label">キーワード</div>
+                    </div>
+                </div>
+
+                <div class="home-grid-sub">
+                    <!-- 2段目: 分類系 -->
+                    <div class="home-card sub-card color-genre" data-list-type="genre">
+                        <div class="card-icon-small"><ons-icon icon="fa-tags"></ons-icon></div>
+                        <div class="card-label-small">ジャンル</div>
+                    </div>
+                    <div class="home-card sub-card color-machine" data-list-type="machine_type">
+                        <div class="card-icon-small"><ons-icon icon="fa-server"></ons-icon></div>
+                        <div class="card-label-small">機種</div>
+                    </div>
+                    <div class="home-card sub-card color-year" data-list-type="release_year">
+                        <div class="card-icon-small"><ons-icon icon="fa-calendar"></ons-icon></div>
+                        <div class="card-label-small">発売年</div>
+                    </div>
+
+                    <!-- 3段目: ツール・番号系 -->
+                    <div class="home-card sub-card color-history" id="btn-history">
+                        <div class="card-icon-small"><ons-icon icon="fa-history"></ons-icon></div>
+                        <div class="card-label-small">履歴</div>
+                    </div>
+                    <div class="home-card sub-card color-favorite" id="btn-favorite">
+                        <div class="card-icon-small"><ons-icon icon="fa-star"></ons-icon></div>
+                        <div class="card-label-small">お気に入り</div>
+                    </div>
+                    <div class="home-card sub-card color-number num-card" id="btn-number-search">
+                        <div class="card-icon-small"><ons-icon icon="fa-list-ol"></ons-icon></div>
+                        <div class="card-label-small">選曲番号</div>
+                    </div>
+                </div>
+
+                <!-- フッター情報 -->
+                <div class="home-footer">
+                    <div id="app-info-display">読込中...</div>
+                    <ons-button modifier="quiet" id="db-update-button" style="font-size: 12px;">
+                        <ons-icon icon="fa-sync"></ons-icon> DB更新
+                    </ons-button>
+                </div>
+            </div>
+        </ons-page>
+    </template>
+
+    <!-- 読み込み中モーダル -->
+    <ons-modal id="loading-modal" direction="up">
+        <div style="text-align: center; padding: 20px;">
+            <ons-progress-circular indeterminate></ons-progress-circular>
+            <p id="loading-message" style="margin-top: 10px;"></p>
+        </div>
+    </ons-modal>
+
+</body>
+</html>

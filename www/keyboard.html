@@ -1,0 +1,93 @@
+<ons-page id="keyboard-page">
+    <ons-toolbar>
+        <div class="left"><ons-back-button>戻る</ons-back-button></div>
+        <div class="center" id="keyboard-page-title">検索</div>
+        <div class="right">
+            <ons-toolbar-button class="btn-goto-top">
+                <ons-icon icon="md-home"></ons-icon> TOP
+            </ons-toolbar-button>
+        </div>
+    </ons-toolbar>
+
+    <div class="keyboard-grid-container">
+        <!-- 左側: 表示エリアとキーボード -->
+        <div class="keyboard-main-area">
+            <div class="display-area">
+                <div id="input-display" class="display-text"></div>
+                <ons-input id="native-input" class="native-input" type="text" placeholder="キーワード入力" style="display:none; flex-grow:1; font-size:24px;"></ons-input>
+                <div id="hit-count" class="hit-count-text"></div>
+            </div>
+
+            <!-- スマホモード専用ボタンエリア -->
+            <div id="smartphone-actions" class="smartphone-actions" style="display:none;">
+                <ons-button id="sp-clear-button" modifier="outline" class="sp-action-btn">クリア</ons-button>
+                <ons-button id="sp-execute-button" class="sp-action-btn">検索</ons-button>
+            </div>
+
+            <div class="keyboard-body">
+                <!-- かなキーボード -->
+                <div id="kana-keyboard" class="keyboard active">
+                    <div class="key-row">
+                        <button class="key">あ</button><button class="key">か</button><button class="key">さ</button><button class="key">た</button><button class="key">な</button><button class="key">は</button><button class="key">ま</button><button class="key">や</button><button class="key">ら</button><button class="key">わ</button>
+                    </div>
+                    <div class="key-row">
+                        <button class="key">い</button><button class="key">き</button><button class="key">し</button><button class="key">ち</button><button class="key">に</button><button class="key">ひ</button><button class="key">み</button><div class="key-space"></div><button class="key">り</button><button class="key">を</button>
+                    </div>
+                    <div class="key-row">
+                        <button class="key">う</button><button class="key">く</button><button class="key">す</button><button class="key">つ</button><button class="key">ぬ</button><button class="key">ふ</button><button class="key">む</button><button class="key">ゆ</button><button class="key">る</button><button class="key">ん</button>
+                    </div>
+                    <div class="key-row">
+                        <button class="key">え</button><button class="key">け</button><button class="key">せ</button><button class="key">て</button><button class="key">ね</button><button class="key">へ</button><button class="key">め</button><div class="key-space"></div><button class="key">れ</button><button class="key func">゛</button>
+                    </div>
+                    <div class="key-row">
+                        <button class="key">お</button><button class="key">こ</button><button class="key">そ</button><button class="key">と</button><button class="key">の</button><button class="key">ほ</button><button class="key">も</button><button class="key">よ</button><button class="key">ろ</button><button class="key func">゜</button>
+                    </div>
+                    <div class="key-row">
+                        <button class="key func">ぁ</button><button class="key func">ぃ</button><button class="key func">ぅ</button><button class="key func">ぇ</button><button class="key func">ぉ</button><button class="key func">っ</button><button class="key func">ゃ</button><button class="key func">ゅ</button><button class="key func">ょ</button><button class="key func">ー</button>
+                    </div>
+                </div>
+
+                <!-- 英数キーボード -->
+                <div id="eng-keyboard" class="keyboard">
+                    <div class="key-row">
+                        <button class="key func">1</button><button class="key func">2</button><button class="key func">3</button><button class="key func">4</button><button class="key func">5</button><button class="key func">6</button><button class="key func">7</button><button class="key func">8</button><button class="key func">9</button><button class="key func">0</button>
+                    </div>
+                    <div class="key-row">
+                        <button class="key">A</button><button class="key">B</button><button class="key">C</button><button class="key">D</button><button class="key">E</button><button class="key">F</button><button class="key">G</button><button class="key">H</button><button class="key">I</button><button class="key">J</button>
+                    </div>
+                    <div class="key-row">
+                        <button class="key">K</button><button class="key">L</button><button class="key">M</button><button class="key">N</button><button class="key">O</button><button class="key">P</button><button class="key">Q</button><button class="key">R</button><button class="key">S</button><button class="key">T</button>
+                    </div>
+                    <div class="key-row">
+                        <button class="key">U</button><button class="key">V</button><button class="key">W</button><button class="key">X</button><button class="key">Y</button><button class="key">Z</button><div class="key-space"></div><div class="key-space"></div><div class="key-space"></div><div class="key-space"></div>
+                    </div>
+                </div>
+
+                <!-- 数字キーパッド (選曲番号用) -->
+                <div id="number-keyboard" class="keyboard">
+                    <div class="key-row">
+                        <button class="key">7</button><button class="key">8</button><button class="key">9</button>
+                    </div>
+                    <div class="key-row">
+                        <button class="key">4</button><button class="key">5</button><button class="key">6</button>
+                    </div>
+                    <div class="key-row">
+                        <button class="key">1</button><button class="key">2</button><button class="key">3</button>
+                    </div>
+                    <div class="key-row">
+                        <div class="key-space"></div><button class="key">0</button><div class="key-space"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右側: 操作ボタン -->
+        <div class="keyboard-side-controls">
+            <button id="side-delete-char-button" class="side-key">1字<br>削除</button>
+            <button id="side-clear-all-button" class="side-key">クリア</button>
+            <button id="side-kana-button" class="side-key side-toggle active">かな</button>
+            <button id="side-eng-button" class="side-key side-toggle">英数</button>
+            <button id="side-execute-search-button" class="side-key cta">検索</button>
+        </div>
+    </div>
+</ons-page>

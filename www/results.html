@@ -1,0 +1,20 @@
+<ons-page id="results-page">
+    <ons-toolbar>
+        <div class="left"><ons-back-button>戻る</ons-back-button></div>
+        <div class="center" id="results-page-title">検索結果</div>
+        <div class="right">
+            <ons-toolbar-button id="btn-filter-results">
+                <ons-icon icon="md-filter-list"></ons-icon>
+            </ons-toolbar-button>
+            <ons-toolbar-button class="btn-goto-top">
+                <ons-icon icon="md-home"></ons-icon> TOP
+            </ons-toolbar-button>
+        </div>
+    </ons-toolbar>
+
+    <!-- 結果リストコンテナ -->
+    <div class="results-container">
+        <!-- フィルタリングボタンが必要ならここに配置（現在はシンプル化のため省略） -->
+        <ons-list id="results-list" class="results-list"></ons-list>
+    </div>
+</ons-page>
