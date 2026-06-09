@@ -37,6 +37,20 @@
             </div>
         </ons-list-item>
 
+        <ons-list-header>データ管理</ons-list-header>
+        <ons-list-item modifier="chevron" tappable id="btn-force-update">
+            <div class="left"><ons-icon icon="fa-download" style="color: #007aff;"></ons-icon></div>
+            <div class="center">差分ファイル強制再受信</div>
+        </ons-list-item>
+        <ons-list-item modifier="chevron" tappable id="btn-error-log">
+            <div class="left"><ons-icon icon="fa-exclamation-triangle" style="color: #ff3b30;"></ons-icon></div>
+            <div class="center">エラー曲ログを確認</div>
+        </ons-list-item>
+        <ons-list-item modifier="chevron" tappable id="btn-clear-history">
+            <div class="left"><ons-icon icon="md-delete" style="color: #ff3b30;"></ons-icon></div>
+            <div class="center">予約履歴をクリア</div>
+        </ons-list-item>
+
         <ons-list-item>
             <ons-button modifier="large" id="btn-save-settings" style="margin: 16px 0;">設定を保存</ons-button>
         </ons-list-item>
@@ -47,7 +61,7 @@
         style="text-align: center; color: #8e8e93; font-size: 11px; margin-top: 24px; padding-bottom: 24px; line-height: 1.6;">
         <span id="btn-release-note"
             style="color: var(--primary-color); text-decoration: underline; cursor: pointer; font-size: 13px;">NaviVersion
-            2.0.1</span> <!-- ←ここにバージョン番号 -->
+            <span id="version-display">2.0.2</span></span> <!-- ←ここにバージョン番号 -->
         <br>
         Developed by Chrono,Miriel
     </div>

@@ -14,7 +14,7 @@ const App = {
             serverIp: "192.168.1.20",
             serverPort: "8080"
         },
-        load: function() {
+        load: function () {
             const saved = localStorage.getItem('csnavi_settings');
             if (saved) {
                 this.data = JSON.parse(saved);
@@ -22,27 +22,27 @@ const App = {
                 App.Network.config.port = this.data.serverPort;
             }
         },
-        save: function() {
+        save: function () {
             localStorage.setItem('csnavi_settings', JSON.stringify(this.data));
             App.Network.config.ip = this.data.serverIp;
             App.Network.config.port = this.data.serverPort;
         }
     },
-    
+
     // ▼▼▼ 履歴管理モジュール ▼▼▼
     History: {
         data: [],
-        MAX_COUNT: 100,
+        MAX_COUNT: 1000,
 
-        load: function() {
+        load: function () {
             const saved = localStorage.getItem('csnavi_history');
             this.data = saved ? JSON.parse(saved) : [];
             return this.data;
         },
-        save: function() {
+        save: function () {
             localStorage.setItem('csnavi_history', JSON.stringify(this.data));
         },
-        add: function(song) {
+        add: function (song) {
             // 必要な情報だけを抽出して保存
             const entry = {
                 request_number: song.request_number,
@@ -62,7 +62,38 @@ const App = {
             }
             this.save();
         },
-        clear: function() {
+        clear: function () {
+            this.data = [];
+            this.save();
+        }
+    },
+
+    // ▼▼▼ エラーログ管理モジュール ▼▼▼
+    ErrorLog: {
+        data: [],
+
+        load: function () {
+            const saved = localStorage.getItem('csnavi_errorlog');
+            this.data = saved ? JSON.parse(saved) : [];
+            return this.data;
+        },
+        save: function () {
+            localStorage.setItem('csnavi_errorlog', JSON.stringify(this.data));
+        },
+        add: function (song, reason) {
+            const entry = {
+                request_number: song.request_number,
+                title: song.title || "不明な楽曲",
+                artist: song.artist || "",
+                type_code: song.type_code || "01",
+                model_code: song.model_code || "",
+                reason: reason,
+                timestamp: Date.now()
+            };
+            this.data.unshift(entry); // 新しいものを先頭へ
+            this.save();
+        },
+        clear: function () {
             this.data = [];
             this.save();
         }
@@ -77,10 +108,10 @@ const App = {
         lastUpdateDate: "--",
         version: "v2.0.2",
 
-        init: function() {
+        init: function () {
             if (this.isInitialized) return;
             App.UI.showLoading("データベース読み込み中...");
-            
+
             const pCsv = new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
                 xhr.open("GET", "csv/db.csv", true);
@@ -129,7 +160,15 @@ const App = {
 
             const pFavorites = fetch('csv/favorites.json')
                 .then(res => res.json())
-                .then(data => { this.favorites = data; })
+                .then(data => {
+                    if (Array.isArray(data)) {
+                        this.favorites = data;
+                    } else if (data && Array.isArray(data.data)) {
+                        this.favorites = data.data;
+                    } else {
+                        this.favorites = [];
+                    }
+                })
                 .catch(err => { console.warn('favorites.json load failed', err); });
 
             return Promise.all([pCsv, pModels, pGenres, pFavorites]).then(() => {
@@ -148,9 +187,9 @@ const App = {
         typePriority: { "02": 1, "08": 2, "04": 3, "03": 4, "10": 5, "06": 6, "01": 7, "00": 8, "05": 9, "07": 10, "09": 11 },
 
         // 検索機能
-        search: function(query, type, keyboardMode) {
+        search: function (query, type, keyboardMode) {
             if (!query || this.songs.length === 0) return [];
-            
+
             let targetQuery = query;
             if (keyboardMode === 'kana' || type === 'keyword') {
                 targetQuery = this.normalizeToHalfWidthKana(query);
@@ -194,8 +233,8 @@ const App = {
                         return str.includes(origQ) || this.normalizeToHalfWidthKana(str).includes(q);
                     };
                     return check(getVal('remarks1')) || check(getVal('remarks1_kana')) ||
-                           check(getVal('remarks2')) || check(getVal('remarks2_kana')) ||
-                           check(getVal('title')) || check(getVal('subtitle')) || check(getVal('artist'));
+                        check(getVal('remarks2')) || check(getVal('remarks2_kana')) ||
+                        check(getVal('title')) || check(getVal('subtitle')) || check(getVal('artist'));
                 } else if (type === 'genre') {
                     return getVal('genre_code') === query;
                 } else if (type === 'song_type') {
@@ -209,7 +248,7 @@ const App = {
                     return getVal(col).startsWith(targetQuery);
                 } else {
                     const col = (type === 'song_title') ? 'title' : 'artist';
-                    let text = getVal(col).replace(/^\[.*?\]/, ''); 
+                    let text = getVal(col).replace(/^\[.*?\]/, '');
                     return text.toLowerCase().startsWith(query.toLowerCase());
                 }
             });
@@ -232,11 +271,11 @@ const App = {
         },
 
         // 半角カナ正規化
-        normalizeToHalfWidthKana: function(str) {
+        normalizeToHalfWidthKana: function (str) {
             if (!str) return '';
             let katakana = str.replace(/[\u3041-\u3096]/g, m => String.fromCharCode(m.charCodeAt(0) + 0x60));
             const map = {
-                'ガ':'ｶﾞ','ギ':'ｷﾞ','グ':'ｸﾞ','ゲ':'ｹﾞ','ゴ':'ｺﾞ','ザ':'ｻﾞ','ジ':'ｼﾞ','ズ':'ｽﾞ','ゼ':'ｾﾞ','ゾ':'ｿﾞ','ダ':'ﾀﾞ','ヂ':'ﾁﾞ','ヅ':'ﾂﾞ','デ':'ﾃﾞ','ド':'ﾄﾞ','バ':'ﾊﾞ','ビ':'ﾋﾞ','ブ':'ﾌﾞ','ベ':'ﾍﾞ','ボ':'ﾎﾞ','パ':'ﾊﾟ','ピ':'ﾋﾟ','プ':'ﾌﾟ','ペ':'ﾍﾟ','ポ':'ﾎﾟ','ヴ':'ｳﾞ','ァ':'ｧ','ィ':'ｨ','ゥ':'ｩ','ェ':'ｪ','ォ':'ｫ','ッ':'ｯ','ャ':'ｬ','ュ':'ｭ','ョ':'ｮ','ア':'ｱ','イ':'ｲ','ウ':'ｳ','エ':'ｴ','オ':'ｵ','カ':'ｶ','キ':'ｷ','ク':'ｸ','ケ':'ｹ','コ':'ｺ','サ':'ｻ','シ':'ｼ','ス':'ｽ','セ':'ｾ','ソ':'ｿ','タ':'ﾀ','チ':'ﾁ','ツ':'ﾂ','テ':'ﾃ','ト':'ﾄ','ナ':'ﾅ','ニ':'ﾆ','ヌ':'ﾇ','ネ':'ﾈ','ノ':'ﾉ','ハ':'ﾊ','ヒ':'ﾋ','フ':'ﾌ','ヘ':'ﾍ','ホ':'ﾎ','マ':'ﾏ','ミ':'ﾐ','ム':'ﾑ','メ':'ﾒ','モ':'ﾓ','ヤ':'ﾔ','ユ':'ﾕ','ヨ':'ﾖ','ラ':'ﾗ','リ':'ﾘ','ル':'ﾙ','レ':'ﾚ','ロ':'ﾛ','ワ':'ﾜ','ヲ':'ｦ','ン':'ﾝ','ー':'ｰ'
+                'ガ': 'ｶﾞ', 'ギ': 'ｷﾞ', 'グ': 'ｸﾞ', 'ゲ': 'ｹﾞ', 'ゴ': 'ｺﾞ', 'ザ': 'ｻﾞ', 'ジ': 'ｼﾞ', 'ズ': 'ｽﾞ', 'ゼ': 'ｾﾞ', 'ゾ': 'ｿﾞ', 'ダ': 'ﾀﾞ', 'ヂ': 'ﾁﾞ', 'ヅ': 'ﾂﾞ', 'デ': 'ﾃﾞ', 'ド': 'ﾄﾞ', 'バ': 'ﾊﾞ', 'ビ': 'ﾋﾞ', 'ブ': 'ﾌﾞ', 'ベ': 'ﾍﾞ', 'ボ': 'ﾎﾞ', 'パ': 'ﾊﾟ', 'ピ': 'ﾋﾟ', 'プ': 'ﾌﾟ', 'ペ': 'ﾍﾟ', 'ポ': 'ﾎﾟ', 'ヴ': 'ｳﾞ', 'ァ': 'ｧ', 'ィ': 'ｨ', 'ゥ': 'ｩ', 'ェ': 'ｪ', 'ォ': 'ｫ', 'ッ': 'ｯ', 'ャ': 'ｬ', 'ュ': 'ｭ', 'ョ': 'ｮ', 'ア': 'ｱ', 'イ': 'ｲ', 'ウ': 'ｳ', 'エ': 'ｴ', 'オ': 'ｵ', 'カ': 'ｶ', 'キ': 'ｷ', 'ク': 'ｸ', 'ケ': 'ｹ', 'コ': 'ｺ', 'サ': 'ｻ', 'シ': 'ｼ', 'ス': 'ｽ', 'セ': 'ｾ', 'ソ': 'ｿ', 'タ': 'ﾀ', 'チ': 'ﾁ', 'ツ': 'ﾂ', 'テ': 'ﾃ', 'ト': 'ﾄ', 'ナ': 'ﾅ', 'ニ': 'ﾆ', 'ヌ': 'ﾇ', 'ネ': 'ﾈ', 'ノ': 'ﾉ', 'ハ': 'ﾊ', 'ヒ': 'ﾋ', 'フ': 'ﾌ', 'ヘ': 'ﾍ', 'ホ': 'ﾎ', 'マ': 'ﾏ', 'ミ': 'ﾐ', 'ム': 'ﾑ', 'メ': 'ﾒ', 'モ': 'ﾓ', 'ヤ': 'ﾔ', 'ユ': 'ﾕ', 'ヨ': 'ﾖ', 'ラ': 'ﾗ', 'リ': 'ﾘ', 'ル': 'ﾙ', 'レ': 'ﾚ', 'ロ': 'ﾛ', 'ワ': 'ﾜ', 'ヲ': 'ｦ', 'ン': 'ﾝ', 'ー': 'ｰ'
             };
             return katakana.replace(/[ァ-ンヴー]/g, s => map[s] || s);
         }
@@ -244,7 +283,7 @@ const App = {
 
     Network: {
         config: { ip: "192.168.1.20", port: "8080" },
-        sendReservation: function(requestNumber) {
+        sendReservation: function (requestNumber) {
             return new Promise((resolve) => {
                 const cleanNum = requestNumber.replace(/-/g, '');
                 const url = `http://${this.config.ip}:${this.config.port}/reserve?number=${cleanNum}`;
@@ -258,12 +297,12 @@ const App = {
         showLoading: (msg) => {
             const m = document.getElementById('loading-modal');
             const t = document.getElementById('loading-message');
-            if(t) t.textContent = msg;
-            if(m) m.show();
+            if (t) t.textContent = msg;
+            if (m) m.show();
         },
         hideLoading: () => {
             const m = document.getElementById('loading-modal');
-            if(m) m.hide();
+            if (m) m.hide();
         },
         handleError: (msg) => {
             App.UI.hideLoading();
@@ -271,13 +310,13 @@ const App = {
         },
         updateFooterInfo: () => {
             const el = document.getElementById('app-info-display');
-            if(el) el.innerHTML = `楽曲数: ${App.Data.songs.length} 件 / 更新: ${App.Data.lastUpdateDate}`;
+            if (el) el.innerHTML = `楽曲数: ${App.Data.songs.length} 件 / 更新: ${App.Data.lastUpdateDate}`;
         },
-        
-        setupPage: function(page) {
+
+        setupPage: function (page) {
             if (!page || page.isInitialized) return;
             const pid = page.id;
-            
+
             if (pid === 'top-page') this.setupTopPage(page);
             else if (pid === 'keyboard-page') setupKeyboardPage(page);
             else if (pid === 'results-page') setupResultsPage(page);
@@ -285,7 +324,7 @@ const App = {
             else if (pid === 'list-select-page') setupListSelectPage(page);
             else if (pid === 'settings-page') this.setupSettingsPage(page);
             else if (pid === 'releasenote-page') this.setupReleaseNotePage(page);
-            
+
             // 「TOPへ」ボタンの共通処理
             const topBtn = page.querySelector('.btn-goto-top');
             if (topBtn) {
@@ -297,7 +336,7 @@ const App = {
             page.isInitialized = true;
         },
 
-        setupTopPage: function(page) {
+        setupTopPage: function (page) {
             page.querySelectorAll('.search-card').forEach(card => {
                 card.onclick = () => App.navigator.pushPage('keyboard.html', { data: { searchType: card.dataset.searchType } });
             });
@@ -325,11 +364,11 @@ const App = {
                 btnUpdate.onclick = () => {
                     ons.notification.confirm({
                         message: 'DBを再読み込みしますか？',
-                        callback: (i) => { if(i===1) { App.Data.isInitialized = false; App.Data.init(); }}
+                        callback: (i) => { if (i === 1) { App.Data.isInitialized = false; App.Data.init(); } }
                     });
                 };
             }
-            
+
             const infoDisplay = page.querySelector('#app-info-display');
             if (infoDisplay) {
                 if (App.Data.isInitialized) {
@@ -340,12 +379,12 @@ const App = {
             }
 
             const numBtn = page.querySelector('#btn-number-search');
-            if(numBtn) numBtn.onclick = () => App.navigator.pushPage('keyboard.html', { data: { searchType: 'number' } });
+            if (numBtn) numBtn.onclick = () => App.navigator.pushPage('keyboard.html', { data: { searchType: 'number' } });
 
-            if(App.Data.isInitialized) this.updateFooterInfo();
+            if (App.Data.isInitialized) this.updateFooterInfo();
         },
 
-        setupSettingsPage: function(page) {
+        setupSettingsPage: function (page) {
             const sw = page.querySelector('#switch-tablet-mode');
             const ip = page.querySelector('#input-server-ip');
             const port = page.querySelector('#input-server-port');
@@ -362,16 +401,55 @@ const App = {
                 App.Settings.save();
                 ons.notification.toast('設定を保存しました', { timeout: 1000 });
             };
-            
+
             const btnReleaseNote = page.querySelector('#btn-release-note');
             if (btnReleaseNote) {
                 btnReleaseNote.onclick = () => App.navigator.pushPage('releasenote.html');
+
+                const versionDisplay = page.querySelector('#version-display');
+                if (versionDisplay) {
+                    fetch('csv/releasenote.json?t=' + new Date().getTime())
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data && data.length > 0) {
+                                versionDisplay.textContent = data[0].version;
+                            }
+                        })
+                        .catch(err => console.warn('releasenote version fetch error:', err));
+                }
+            }
+
+            const btnForceUpdate = page.querySelector('#btn-force-update');
+            if (btnForceUpdate) {
+                btnForceUpdate.onclick = () => {
+                    ons.notification.alert('この機能は未実装です(CSVフォルダとIMGフォルダのデータをコマンダーから全件強制受信上書き機能');
+                };
+            }
+
+            const btnErrorLog = page.querySelector('#btn-error-log');
+            if (btnErrorLog) {
+                btnErrorLog.onclick = () => App.navigator.pushPage('list_select.html', { data: { listType: 'errorlog' } });
+            }
+
+            const btnClearHistory = page.querySelector('#btn-clear-history');
+            if (btnClearHistory) {
+                btnClearHistory.onclick = () => {
+                    ons.notification.confirm({
+                        message: '予約履歴をすべて削除しますか？',
+                        callback: (idx) => {
+                            if (idx === 1) {
+                                App.History.clear();
+                                ons.notification.toast('予約履歴をクリアしました', { timeout: 1500 });
+                            }
+                        }
+                    });
+                };
             }
         },
 
-        setupReleaseNotePage: function(page) {
+        setupReleaseNotePage: function (page) {
             const listContainer = page.querySelector('#releasenote-list');
-            fetch('csv/releasenote.json')
+            fetch('csv/releasenote.json?t=' + new Date().getTime())
                 .then(res => res.json())
                 .then(data => {
                     listContainer.innerHTML = '';
@@ -397,11 +475,12 @@ const App = {
 document.addEventListener('DOMContentLoaded', () => {
     App.Settings.load();
     App.History.load(); // 履歴の読み込みを追加
+    App.ErrorLog.load(); // エラーログの読み込み
     App.navigator = document.getElementById('myNavigator');
     App.navigator.addEventListener('postpush', (e) => App.UI.setupPage(e.enterPage));
 });
 ons.ready(() => {
-    if(App.navigator && App.navigator.pages.length > 0) App.UI.setupPage(App.navigator.pages[0]);
+    if (App.navigator && App.navigator.pages.length > 0) App.UI.setupPage(App.navigator.pages[0]);
 });
 document.addEventListener('deviceready', () => {
     App.Settings.load();
@@ -414,7 +493,7 @@ document.addEventListener('deviceready', () => {
 function setupKeyboardPage(page) {
     const type = page.data.searchType || 'song_title';
     const isTablet = App.Settings.data.isTabletMode;
-    
+
     const display = page.querySelector('#input-display');
     const nativeInput = page.querySelector('#native-input');
     const hitCount = page.querySelector('#hit-count');
@@ -425,11 +504,11 @@ function setupKeyboardPage(page) {
     const kanaKb = page.querySelector('#kana-keyboard');
     const engKb = page.querySelector('#eng-keyboard');
     const numKb = page.querySelector('#number-keyboard');
-    
-    const titles = { 
-        'song_title': '曲名検索', 
-        'artist': '歌手検索', 
-        'keyword': 'キーワード検索', 
+
+    const titles = {
+        'song_title': '曲名検索',
+        'artist': '歌手検索',
+        'keyword': 'キーワード検索',
         'number': '番号入力',
         'release_year': '発売年から探す'
     };
@@ -468,7 +547,7 @@ function setupKeyboardPage(page) {
         sideControls.style.display = 'none'; // サイドを隠す
         page.querySelector('#smartphone-actions').style.display = 'flex'; // 下部ボタンを出す
         keyboardGrid.style.gridTemplateColumns = '1fr'; // 全幅
-        
+
         if (type === 'number') {
             display.style.display = 'block';
             nativeInput.style.display = 'none';
@@ -481,7 +560,7 @@ function setupKeyboardPage(page) {
             currentQuery = e.target.value;
             updateHits();
         };
-        setTimeout(() => { if(type !== 'number') nativeInput.focus(); }, 300);
+        setTimeout(() => { if (type !== 'number') nativeInput.focus(); }, 300);
     }
 
     const applyDakuten = (str, char) => {
@@ -492,8 +571,8 @@ function setupKeyboardPage(page) {
         return str;
     };
 
-    const dakuon = {'か':'が','き':'ぎ','く':'ぐ','け':'げ','こ':'ご','さ':'ざ','し':'じ','す':'ず','せ':'ぜ','そ':'ぞ','た':'だ','ち':'ぢ','つ':'づ','て':'で','と':'ど','は':'ば','ひ':'び','ふ':'ぶ','へ':'べ','ほ':'ぼ'};
-    const handakuon = {'は':'ぱ','ひ':'ぴ','ふ':'ぷ','へ':'ぺ','ほ':'ぽ'};
+    const dakuon = { 'か': 'が', 'き': 'ぎ', 'く': 'ぐ', 'け': 'げ', 'こ': 'ご', 'さ': 'ざ', 'し': 'じ', 'す': 'ず', 'せ': 'ぜ', 'そ': 'ぞ', 'た': 'だ', 'ち': 'ぢ', 'つ': 'づ', 'て': 'で', 'と': 'ど', 'は': 'ば', 'ひ': 'び', 'ふ': 'ぶ', 'へ': 'べ', 'ほ': 'ぼ' };
+    const handakuon = { 'は': 'ぱ', 'ひ': 'ぴ', 'ふ': 'ぷ', 'へ': 'ぺ', 'ほ': 'ぽ' };
 
     if (type === 'number' || type === 'release_year') {
         hitCount.style.display = 'none';
@@ -506,13 +585,13 @@ function setupKeyboardPage(page) {
             k.onclick = () => {
                 const char = k.textContent.trim();
                 const limit = (type === 'release_year') ? 4 : 6;
-                
-                if(currentQuery.length < limit) {
+
+                if (currentQuery.length < limit) {
                     currentQuery += char;
                     if (type === 'release_year') {
                         display.textContent = currentQuery;
                     } else {
-                        display.textContent = currentQuery.slice(0,4) + (currentQuery.length>4 ? '-' : '') + currentQuery.slice(4);
+                        display.textContent = currentQuery.slice(0, 4) + (currentQuery.length > 4 ? '-' : '') + currentQuery.slice(4);
                     }
                 }
             };
@@ -534,9 +613,9 @@ function setupKeyboardPage(page) {
     // 共通操作
     const executeSearch = () => {
         if (!currentQuery) return;
-        
+
         let queryToSearch = currentQuery;
-        
+
         // 発売年の場合は4桁チェック
         if (type === 'release_year') {
             if (currentQuery.length !== 4) {
@@ -544,17 +623,17 @@ function setupKeyboardPage(page) {
                 return;
             }
         }
-        
+
         // 選曲番号の場合はハイフンを挿入
         if (type === 'number') {
             if (currentQuery.length === 6) {
                 queryToSearch = currentQuery.slice(0, 4) + '-' + currentQuery.slice(4);
             }
         }
-        
+
         const currentMode = page.querySelector('#side-kana-button').classList.contains('active') ? 'kana' : 'eng';
         const results = App.Data.search(queryToSearch, type, currentMode);
-        
+
         // 選曲番号の場合は特殊な挙動
         if (type === 'number') {
             if (results.length > 0) {
@@ -573,7 +652,7 @@ function setupKeyboardPage(page) {
                             const rawSong = { request_number: queryToSearch, title: "直接入力", artist: "", type_code: "99" };
                             App.History.add(rawSong); // 履歴に追加
                             App.Network.sendReservation(queryToSearch)
-                                .then(msg => ons.notification.toast(msg, {timeout:2000}));
+                                .then(msg => ons.notification.toast(msg, { timeout: 2000 }));
                         }
                     }
                 });
@@ -581,8 +660,8 @@ function setupKeyboardPage(page) {
             return;
         }
 
-        App.navigator.pushPage('results.html', { 
-            data: { searchResults: results, searchQuery: queryToSearch, searchTypeLabel: titles[type] } 
+        App.navigator.pushPage('results.html', {
+            data: { searchResults: results, searchQuery: queryToSearch, searchTypeLabel: titles[type] }
         });
     };
 
@@ -605,7 +684,7 @@ function setupKeyboardPage(page) {
     page.querySelector('#side-delete-char-button').onclick = () => {
         currentQuery = currentQuery.slice(0, -1);
         if (type === 'number') {
-            display.textContent = currentQuery.slice(0,4) + (currentQuery.length>4 ? '-' : '') + currentQuery.slice(4);
+            display.textContent = currentQuery.slice(0, 4) + (currentQuery.length > 4 ? '-' : '') + currentQuery.slice(4);
         } else if (type === 'release_year') {
             display.textContent = currentQuery;
         } else {
@@ -644,7 +723,7 @@ function setupResultsPage(page) {
     let results = originalResults;
     let list = page.querySelector('.results-list') || page.querySelector('#results-list');
     const titleEl = page.querySelector('#results-page-title') || page.querySelector('.center');
-    
+
     // 実機でのタイミング問題を回避するため、見つからない場合は少し待って再試行
     if (!list) {
         setTimeout(() => {
@@ -656,7 +735,7 @@ function setupResultsPage(page) {
                     list = allLists[allLists.length - 1]; // 一番最後に追加された（アクティブな）リストを採用
                 }
             }
-            
+
             if (!list) {
                 console.error('results-list not found even after robust retry. Page ID:', page.id);
                 // 最終手段：動的に作ってしまう
@@ -692,7 +771,7 @@ function setupResultsPage(page) {
 
             for (let i = renderedCount; i < nextCount; i++) {
                 const res = results[i];
-                
+
                 if (typeof res === 'string') {
                     // 【歌手一覧モード】
                     const item = ons.createElement(`
@@ -714,8 +793,8 @@ function setupResultsPage(page) {
                             if (pA !== pB) return pA - pB;
                             return a.request_number.localeCompare(b.request_number);
                         });
-                        App.navigator.pushPage('results.html', { 
-                            data: { searchResults: songs, searchQuery: res, searchTypeLabel: '楽曲一覧' } 
+                        App.navigator.pushPage('results.html', {
+                            data: { searchResults: songs, searchQuery: res, searchTypeLabel: '楽曲一覧' }
                         });
                     };
                     fragment.appendChild(item);
@@ -723,11 +802,11 @@ function setupResultsPage(page) {
                     // 【通常楽曲モード】
                     const s = res;
                     const squareTypeCode = s.type_code ? String(s.type_code).padStart(3, '0') : '';
-                    const typeImg = squareTypeCode 
-                        ? `<img src="img/songtype/${squareTypeCode}.png" onerror="this.style.display='none'">` 
+                    const typeImg = squareTypeCode
+                        ? `<img src="img/songtype/${squareTypeCode}.png" onerror="this.style.display='none'">`
                         : '';
-                    const machImg = s.model_code 
-                        ? `<img src="img/machinetype/${s.model_code}.png" onerror="this.style.display='none'">` 
+                    const machImg = s.model_code
+                        ? `<img src="img/machinetype/${s.model_code}.png" onerror="this.style.display='none'">`
                         : '';
 
                     const item = ons.createElement(`
@@ -828,13 +907,13 @@ function setupDetailsPage(page) {
     const container = page.querySelector('#song-details-content');
     const layout = page.querySelector('#details-page-layout');
     const isTablet = App.Settings.data.isTabletMode;
-    
+
     if (!container) {
         console.error('song-details-content not found on details-page');
         return;
     }
-    
-    if(!song) { container.innerHTML='<p>エラー: 楽曲が見つかりません</p>'; return; }
+
+    if (!song) { container.innerHTML = '<p>エラー: 楽曲が見つかりません</p>'; return; }
 
     // スマホモード時はクラスを付与してスタイルを適用
     if (!isTablet) {
@@ -843,11 +922,11 @@ function setupDetailsPage(page) {
 
     const txt = (k) => song[k] || '－';
     const typeImgCode = song.type_code ? String(song.type_code).padStart(2, '0') : '';
-    const imgType = typeImgCode 
-        ? `<img src="img/songtype/${typeImgCode}.png" class="details-img-type" onerror="this.parentElement.textContent='画像なし'">` 
+    const imgType = typeImgCode
+        ? `<img src="img/songtype/${typeImgCode}.png" class="details-img-type" onerror="this.parentElement.textContent='画像なし'">`
         : '－';
-    const imgMach = song.model_code 
-        ? `<img src="img/machinetype/${song.model_code}.png" class="details-img-mach" onerror="this.parentElement.textContent='画像なし'">` 
+    const imgMach = song.model_code
+        ? `<img src="img/machinetype/${song.model_code}.png" class="details-img-mach" onerror="this.parentElement.textContent='画像なし'">`
         : '－';
 
     const html = `
@@ -901,20 +980,20 @@ function setupDetailsPage(page) {
     page.querySelector('#reservation-button').onclick = () => {
         App.History.add(song); // 履歴に追加
         App.Network.sendReservation(song.request_number)
-            .then(msg => ons.notification.toast(msg, {timeout:2000}));
+            .then(msg => ons.notification.toast(msg, { timeout: 2000 }));
     };
 
     // 項目名クリックでのID検索
     page.querySelector('#th-search-parent').onclick = () => {
         const parentId = song.parent_song_id;
-        if (!parentId || parentId === 'nan') return ons.notification.toast('関連曲データがありません', {timeout: 1000});
+        if (!parentId || parentId === 'nan') return ons.notification.toast('関連曲データがありません', { timeout: 1000 });
         const results = App.Data.songs.filter(s => s.parent_song_id === parentId);
         App.navigator.pushPage('results.html', { data: { searchResults: results, searchQuery: `関連曲(${song.title})`, searchTypeLabel: '関連曲' } });
     };
 
     page.querySelector('#th-search-artist').onclick = () => {
         const artistId = song.artist_id;
-        if (!artistId || artistId === 'nan') return ons.notification.toast('歌手データがありません', {timeout: 1000});
+        if (!artistId || artistId === 'nan') return ons.notification.toast('歌手データがありません', { timeout: 1000 });
         const results = App.Data.songs.filter(s => s.artist_id === artistId);
         App.navigator.pushPage('results.html', { data: { searchResults: results, searchQuery: song.artist, searchTypeLabel: '歌手曲検索' } });
     };
@@ -928,7 +1007,7 @@ function setupDetailsPage(page) {
 
     const imgElement = document.createElement('img');
     imgElement.className = 'jacket-image';
-    
+
     imgElement.onerror = () => {
         if (imgElement.src.includes(reqNumClean) && parentId) {
             // 第1候補失敗 -> 第2候補へ
@@ -944,7 +1023,89 @@ function setupDetailsPage(page) {
 
     // ツールバーの予約ボタンはクリア
     const resContainer = document.getElementById('reservation-button-container');
-    if(resContainer) resContainer.innerHTML = '';
+    if (resContainer) resContainer.innerHTML = '';
+
+    // エラー報告ボタンの処理
+    const btnReportError = page.querySelector('#btn-report-error');
+    if (btnReportError) {
+        btnReportError.onclick = () => {
+            let dialog = document.getElementById('error-dialog');
+            if (!dialog) {
+                dialog = ons.createElement(`
+                    <ons-dialog id="error-dialog">
+                        <div style="text-align: center; padding: 10px;">
+                            <p>エラー内容を選択してください</p>
+                            <ons-list>
+                                <ons-list-item tappable>
+                                    <label class="left">
+                                        <ons-radio name="error-reason" input-id="radio-1" value="楽曲が存在しない" checked></ons-radio>
+                                    </label>
+                                    <label for="radio-1" class="center">楽曲が存在しない</label>
+                                </ons-list-item>
+                                <ons-list-item tappable>
+                                    <label class="left">
+                                        <ons-radio name="error-reason" input-id="radio-2" value="楽曲情報に不備がある"></ons-radio>
+                                    </label>
+                                    <label for="radio-2" class="center">楽曲情報に不備がある</label>
+                                </ons-list-item>
+                                <ons-list-item tappable>
+                                    <label class="left">
+                                        <ons-radio name="error-reason" input-id="radio-3" value="楽曲が重複している"></ons-radio>
+                                    </label>
+                                    <label for="radio-3" class="center">楽曲が重複している</label>
+                                </ons-list-item>
+                                <ons-list-item tappable>
+                                    <label class="left">
+                                        <ons-radio name="error-reason" input-id="radio-4" value="楽曲タイプが間違っている"></ons-radio>
+                                    </label>
+                                    <label for="radio-4" class="center">楽曲タイプが間違っている</label>
+                                </ons-list-item>
+                                <ons-list-item tappable>
+                                    <label class="left">
+                                        <ons-radio name="error-reason" input-id="radio-5" value="選曲番号が間違っている"></ons-radio>
+                                    </label>
+                                    <label for="radio-5" class="center">選曲番号が間違っている</label>
+                                </ons-list-item>
+                                <ons-list-item tappable>
+                                    <label class="left">
+                                        <ons-radio name="error-reason" input-id="radio-6" value="機種が間違っている"></ons-radio>
+                                    </label>
+                                    <label for="radio-6" class="center">機種が間違っている</label>
+                                </ons-list-item>
+                                <ons-list-item tappable>
+                                    <label class="left">
+                                        <ons-radio name="error-reason" input-id="radio-7" value="動画データに不具合がある"></ons-radio>
+                                    </label>
+                                    <label for="radio-7" class="center">動画データに不具合がある</label>
+                                </ons-list-item>
+                            </ons-list>
+                            <div style="margin-top: 15px; display: flex; justify-content: space-around;">
+                                <ons-button id="btn-cancel-error" modifier="quiet">キャンセル</ons-button>
+                                <ons-button id="btn-save-error">保存</ons-button>
+                            </div>
+                        </div>
+                    </ons-dialog>
+                `);
+                document.body.appendChild(dialog);
+            }
+
+            dialog.querySelector('#btn-cancel-error').onclick = () => {
+                dialog.hide().then(() => dialog.remove());
+            };
+
+            dialog.querySelector('#btn-save-error').onclick = () => {
+                const radios = Array.from(dialog.querySelectorAll('ons-radio[name="error-reason"]'));
+                const selected = radios.find(r => r.checked);
+                if (selected) {
+                    App.ErrorLog.add(song, selected.value);
+                    ons.notification.toast('エラー内容を保存しました', { timeout: 1500 });
+                }
+                dialog.hide().then(() => dialog.remove());
+            };
+
+            dialog.show();
+        };
+    }
 }
 
 // リスト選択画面
@@ -952,9 +1113,9 @@ function setupListSelectPage(page) {
     const type = page.data.listType;
     const list = page.querySelector('#select-list');
     const title = page.querySelector('#list-select-page-title');
-    
+
     list.innerHTML = '';
-    
+
     if (type === 'history') {
         title.textContent = '履歴';
 
@@ -971,11 +1132,11 @@ function setupListSelectPage(page) {
                 // DBにない場合は 099 を使用
                 const rawTypeCode = dbSong ? song.type_code : "99";
                 const squareTypeCode = String(rawTypeCode).padStart(3, '0');
-                const typeImg = squareTypeCode 
-                    ? `<img src="img/songtype/${squareTypeCode}.png" onerror="this.style.display='none'">` 
+                const typeImg = squareTypeCode
+                    ? `<img src="img/songtype/${squareTypeCode}.png" onerror="this.style.display='none'">`
                     : '';
-                const machImg = song.model_code 
-                    ? `<img src="img/machinetype/${song.model_code}.png" onerror="this.style.display='none'">` 
+                const machImg = song.model_code
+                    ? `<img src="img/machinetype/${song.model_code}.png" onerror="this.style.display='none'">`
                     : `<span style="font-size:10px; color:#888;">${song.request_number}</span>`;
 
                 const item = ons.createElement(`
@@ -1000,6 +1161,128 @@ function setupListSelectPage(page) {
                 list.appendChild(item);
             });
         }
+    } else if (type === 'errorlog') {
+        title.textContent = 'エラー曲ログ';
+
+        const errorData = App.ErrorLog.data;
+        const btnToggle = page.querySelector('#btn-toggle-delete-mode');
+        const btnExecute = page.querySelector('#btn-execute-delete');
+        const btnCancel = page.querySelector('#btn-cancel-delete');
+        const btnGotoTop = page.querySelector('#btn-goto-top-select');
+
+        let isDeleteMode = false;
+
+        const updateToolbar = () => {
+            if (App.ErrorLog.data.length === 0) {
+                if (btnToggle) btnToggle.style.display = 'none';
+                if (btnExecute) btnExecute.style.display = 'none';
+                if (btnCancel) btnCancel.style.display = 'none';
+                if (btnGotoTop) btnGotoTop.style.display = '';
+            } else {
+                if (btnToggle) btnToggle.style.display = isDeleteMode ? 'none' : '';
+                if (btnExecute) btnExecute.style.display = isDeleteMode ? '' : 'none';
+                if (btnCancel) btnCancel.style.display = isDeleteMode ? '' : 'none';
+                if (btnGotoTop) btnGotoTop.style.display = isDeleteMode ? 'none' : '';
+            }
+        };
+
+        if (errorData.length === 0) {
+            list.innerHTML = '<ons-list-item>エラーログはありません</ons-list-item>';
+            updateToolbar();
+        } else {
+            errorData.forEach(savedSong => {
+                const dbSong = App.Data.songs.find(s => s.request_number === savedSong.request_number);
+                const song = dbSong || savedSong;
+
+                const rawTypeCode = dbSong ? song.type_code : "99";
+                const squareTypeCode = String(rawTypeCode).padStart(3, '0');
+                const typeImg = squareTypeCode
+                    ? `<img src="img/songtype/${squareTypeCode}.png" onerror="this.style.display='none'">`
+                    : '';
+                const machImg = song.model_code
+                    ? `<img src="img/machinetype/${song.model_code}.png" onerror="this.style.display='none'">`
+                    : `<span style="font-size:10px; color:#888;">${song.request_number}</span>`;
+
+                const item = ons.createElement(`
+                    <ons-list-item tappable class="search-result-item" data-timestamp="${savedSong.timestamp}">
+                        <div class="left errorlog-checkbox-container" style="display: none; margin-right: 15px;">
+                            <ons-checkbox class="errorlog-checkbox" value="${savedSong.timestamp}"></ons-checkbox>
+                        </div>
+                        <div class="center list-item-container" style="width: 100%;">
+                            <div class="list-item-song-type">${typeImg}</div>
+                            <div class="list-item-main-content">
+                                <div class="list-item-title-row">
+                                    <div class="list-item-title">${song.title}</div>
+                                    <div class="list-item-machine-type">${machImg}</div>
+                                </div>
+                                ${song.subtitle ? `<div class="list-item-subtitle">${song.subtitle}</div>` : ''}
+                                <div class="list-item-artist" style="display:flex; justify-content:space-between; width:100%;">
+                                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${song.artist}</span>
+                                    <span style="color: #ff3b30; font-size: 10px; border: 1px solid #ff3b30; padding: 0 4px; border-radius: 4px; white-space: nowrap; align-self: center; margin-left: 8px;">${savedSong.reason}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </ons-list-item>
+                `);
+
+                item.onclick = (e) => {
+                    if (isDeleteMode) {
+                        if (e.target.tagName.toLowerCase() !== 'ons-checkbox' && e.target.tagName.toLowerCase() !== 'input') {
+                            const checkbox = item.querySelector('ons-checkbox');
+                            if (checkbox) checkbox.checked = !checkbox.checked;
+                        }
+                    } else {
+                        App.navigator.pushPage('details.html', { data: { songId: song.request_number } });
+                    }
+                };
+                list.appendChild(item);
+            });
+            updateToolbar();
+
+            if (btnToggle) {
+                btnToggle.onclick = () => {
+                    isDeleteMode = true;
+                    updateToolbar();
+                    list.querySelectorAll('.errorlog-checkbox-container').forEach(el => el.style.display = '');
+                };
+            }
+
+            if (btnCancel) {
+                btnCancel.onclick = () => {
+                    isDeleteMode = false;
+                    updateToolbar();
+                    list.querySelectorAll('.errorlog-checkbox-container').forEach(el => {
+                        el.style.display = 'none';
+                        const cb = el.querySelector('ons-checkbox');
+                        if (cb) cb.checked = false;
+                    });
+                };
+            }
+
+            if (btnExecute) {
+                btnExecute.onclick = () => {
+                    const checkboxes = Array.from(list.querySelectorAll('.errorlog-checkbox'));
+                    const selectedTimestamps = checkboxes.filter(cb => cb.checked).map(cb => parseInt(cb.value, 10));
+
+                    if (selectedTimestamps.length === 0) {
+                        ons.notification.alert('削除するログを選択してください');
+                        return;
+                    }
+
+                    ons.notification.confirm({
+                        message: '選択したログを削除しますか？',
+                        callback: (idx) => {
+                            if (idx === 1) {
+                                App.ErrorLog.data = App.ErrorLog.data.filter(log => !selectedTimestamps.includes(log.timestamp));
+                                App.ErrorLog.save();
+                                ons.notification.toast('削除しました', { timeout: 1500 });
+                                setupListSelectPage(page);
+                            }
+                        }
+                    });
+                };
+            }
+        }
     } else if (type === 'favorite') {
         title.textContent = 'お気に入り';
 
@@ -1013,11 +1296,11 @@ function setupListSelectPage(page) {
 
                 const rawTypeCode = song.type_code || "99";
                 const squareTypeCode = String(rawTypeCode).padStart(3, '0');
-                const typeImg = squareTypeCode 
-                    ? `<img src="img/songtype/${squareTypeCode}.png" onerror="this.style.display='none'">` 
+                const typeImg = squareTypeCode
+                    ? `<img src="img/songtype/${squareTypeCode}.png" onerror="this.style.display='none'">`
                     : '';
-                const machImg = song.model_code 
-                    ? `<img src="img/machinetype/${song.model_code}.png" onerror="this.style.display='none'">` 
+                const machImg = song.model_code
+                    ? `<img src="img/machinetype/${song.model_code}.png" onerror="this.style.display='none'">`
                     : `<span style="font-size:10px; color:#888;">${song.request_number}</span>`;
 
                 const item = ons.createElement(`
@@ -1041,16 +1324,16 @@ function setupListSelectPage(page) {
                 list.appendChild(item);
             });
         }
-    } else if(type === 'genre' || type === 'song_type') {
+    } else if (type === 'genre' || type === 'song_type') {
         title.textContent = 'ジャンル選択';
         list.style.display = 'block'; // 機種別と同様にリスト形式に
-        
+
         const codes = [...new Set(App.Data.songs.map(s => s.genre_code).filter(Boolean))].sort();
         codes.forEach(c => {
             const genreInfo = App.Data.genres[c];
             const description = (genreInfo && genreInfo.description) ? genreInfo.description : "このジャンルの説明文は準備中です。";
             const genreName = (genreInfo && genreInfo.name) ? genreInfo.name : `ジャンル ${c}`;
-            
+
             const item = ons.createElement(`
                 <ons-list-item tappable class="machine-select-item">
                     <div class="left-section" style="flex-direction: column; height: auto; min-height: 80px;">
@@ -1071,7 +1354,7 @@ function setupListSelectPage(page) {
     } else {
         title.textContent = '機種選択';
         list.style.display = 'block'; // 3列グリッドから通常リストに変更
-        
+
         const codes = [...new Set(App.Data.songs.map(s => s.model_code).filter(Boolean))].sort();
         codes.forEach(c => {
             const modelInfo = App.Data.models[c];

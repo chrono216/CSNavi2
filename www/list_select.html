@@ -3,7 +3,12 @@
         <div class="left"><ons-back-button>戻る</ons-back-button></div>
         <div class="center" id="list-select-page-title">リスト選択</div>
         <div class="right">
-            <ons-toolbar-button class="btn-goto-top">
+            <ons-toolbar-button id="btn-cancel-delete" style="display: none; font-size: 12px;">キャンセル</ons-toolbar-button>
+            <ons-toolbar-button id="btn-execute-delete" style="display: none; color: #ff3b30; font-size: 12px;">削除実行</ons-toolbar-button>
+            <ons-toolbar-button id="btn-toggle-delete-mode" style="display: none;">
+                <ons-icon icon="md-delete"></ons-icon>
+            </ons-toolbar-button>
+            <ons-toolbar-button class="btn-goto-top" id="btn-goto-top-select">
                 <ons-icon icon="md-home"></ons-icon> TOP
             </ons-toolbar-button>
         </div>
