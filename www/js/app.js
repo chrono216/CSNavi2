@@ -11,6 +11,7 @@ const App = {
     Settings: {
         data: {
             isTabletMode: true,
+            isLiteMode: false,
             serverIp: "192.168.1.20",
             serverPort: "8080"
         },
@@ -208,9 +209,13 @@ const App = {
                     }
                 });
 
+                // LiteモードがONの場合はlite===1の曲を除外
+                const isLiteMode = App.Settings.data.isLiteMode;
+                const filteredMatchedSongs = isLiteMode ? matchedSongs.filter(s => s.lite !== "1") : matchedSongs;
+
                 // 歌手名とカナをペアにしてユニーク化
                 const artistMap = new Map(); // artist -> artist_kana
-                matchedSongs.forEach(s => {
+                filteredMatchedSongs.forEach(s => {
                     if (!artistMap.has(s.artist)) {
                         artistMap.set(s.artist, s.artist_kana);
                     }
@@ -253,8 +258,12 @@ const App = {
                 }
             });
 
+            // LiteモードがONの場合はlite===1の曲を除外
+            const isLiteMode = App.Settings.data.isLiteMode;
+            const filteredResults = isLiteMode ? results.filter(s => s.lite !== "1") : results;
+
             // ソートルールの適用
-            return results.sort((a, b) => {
+            return filteredResults.sort((a, b) => {
                 // 1. カナ順
                 const kanaA = a.title_kana || '';
                 const kanaB = b.title_kana || '';
@@ -386,21 +395,29 @@ const App = {
 
         setupSettingsPage: function (page) {
             const sw = page.querySelector('#switch-tablet-mode');
-            const ip = page.querySelector('#input-server-ip');
-            const port = page.querySelector('#input-server-port');
-            const btn = page.querySelector('#btn-save-settings');
+            const swLite = page.querySelector('#switch-lite-mode');
 
             sw.checked = App.Settings.data.isTabletMode;
-            ip.value = App.Settings.data.serverIp;
-            port.value = App.Settings.data.serverPort;
+            if (swLite) swLite.checked = App.Settings.data.isLiteMode;
 
-            btn.onclick = () => {
+            sw.onchange = function() {
                 App.Settings.data.isTabletMode = sw.checked;
-                App.Settings.data.serverIp = ip.value;
-                App.Settings.data.serverPort = port.value;
                 App.Settings.save();
-                ons.notification.toast('設定を保存しました', { timeout: 1000 });
+                ons.notification.toast(`タブレットモードを${sw.checked ? 'ON' : 'OFF'}にしました`, { timeout: 1000 });
             };
+
+            if (swLite) {
+                swLite.onchange = function() {
+                    App.Settings.data.isLiteMode = swLite.checked;
+                    App.Settings.save();
+                    ons.notification.toast(`Liteモードを${swLite.checked ? 'ON' : 'OFF'}にしました`, { timeout: 1000 });
+                };
+            }
+
+            const btnNetwork = page.querySelector('#btn-network-settings');
+            if (btnNetwork) {
+                btnNetwork.onclick = () => App.navigator.pushPage('network_settings.html');
+            }
 
             const btnReleaseNote = page.querySelector('#btn-release-note');
             if (btnReleaseNote) {
@@ -445,6 +462,29 @@ const App = {
                     });
                 };
             }
+        },
+
+        setupNetworkSettingsPage: function (page) {
+            const ip = page.querySelector('#input-server-ip');
+            const port = page.querySelector('#input-server-port');
+            const btnSave = page.querySelector('#btn-save-network');
+            const btnTest = page.querySelector('#btn-test-network');
+
+            ip.value = App.Settings.data.serverIp;
+            port.value = App.Settings.data.serverPort;
+
+            btnSave.onclick = () => {
+                App.Settings.data.serverIp = ip.value;
+                App.Settings.data.serverPort = port.value;
+                App.Settings.save();
+                ons.notification.toast('通信設定を保存しました', { timeout: 1000 });
+            };
+
+            btnTest.onclick = () => {
+                App.Network.sendReservation('0000-00')
+                    .then(msg => ons.notification.alert(msg))
+                    .catch(err => ons.notification.alert('送信エラー: ' + err));
+            };
         },
 
         setupReleaseNotePage: function (page) {
@@ -641,6 +681,13 @@ function setupKeyboardPage(page) {
                 App.History.add(results[0]); // 履歴に追加
                 App.navigator.pushPage('details.html', { data: { songId: results[0].request_number } });
             } else {
+                // Liteモード起因かどうかをチェック
+                const realSong = App.Data.songs.find(s => s.request_number === queryToSearch);
+                if (App.Settings.data.isLiteMode && realSong && realSong.lite === "1") {
+                    ons.notification.alert('指定曲は選曲できません');
+                    return;
+                }
+
                 // 該当なし：確認ダイアログ
                 ons.notification.confirm({
                     title: '確認',
@@ -978,6 +1025,10 @@ function setupDetailsPage(page) {
 
     // 予約ボタンの処理
     page.querySelector('#reservation-button').onclick = () => {
+        if (App.Settings.data.isLiteMode && song.lite === "1") {
+            ons.notification.alert('指定曲は選曲できません');
+            return;
+        }
         App.History.add(song); // 履歴に追加
         App.Network.sendReservation(song.request_number)
             .then(msg => ons.notification.toast(msg, { timeout: 2000 }));
@@ -1346,7 +1397,8 @@ function setupListSelectPage(page) {
                 </ons-list-item>
             `);
             item.onclick = () => {
-                const res = App.Data.songs.filter(s => s.genre_code == c);
+                let res = App.Data.songs.filter(s => s.genre_code == c);
+                if (App.Settings.data.isLiteMode) res = res.filter(s => s.lite !== "1");
                 App.navigator.pushPage('results.html', { data: { searchResults: res, searchQuery: `ジャンル:${genreName}` } });
             };
             list.appendChild(item);
@@ -1371,7 +1423,8 @@ function setupListSelectPage(page) {
                 </ons-list-item>
             `);
             item.onclick = () => {
-                const res = App.Data.songs.filter(s => s.model_code == c);
+                let res = App.Data.songs.filter(s => s.model_code == c);
+                if (App.Settings.data.isLiteMode) res = res.filter(s => s.lite !== "1");
                 App.navigator.pushPage('results.html', { data: { searchResults: res, searchQuery: `機種:${c}` } });
             };
             list.appendChild(item);
@@ -1380,3 +1433,4 @@ function setupListSelectPage(page) {
 }
 // force update
 // End of file cleanup
+// forced update

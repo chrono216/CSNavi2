@@ -1,0 +1,43 @@
+<ons-page id="network-settings-page">
+    <ons-toolbar>
+        <div class="left"><ons-back-button>戻る</ons-back-button></div>
+        <div class="center">通信設定</div>
+        <div class="right">
+            <ons-toolbar-button class="btn-goto-top">
+                <ons-icon icon="md-home"></ons-icon> TOP
+            </ons-toolbar-button>
+        </div>
+    </ons-toolbar>
+
+    <ons-list>
+        <ons-list-header>サーバー接続設定</ons-list-header>
+        <ons-list-item>
+            <div class="left">IPアドレス</div>
+            <div class="center">
+                <ons-input id="input-server-ip" type="text" modifier="transparent"></ons-input>
+            </div>
+        </ons-list-item>
+        <ons-list-item>
+            <div class="left">ポート</div>
+            <div class="center">
+                <ons-input id="input-server-port" type="number" modifier="transparent"></ons-input>
+            </div>
+        </ons-list-item>
+
+        <ons-list-item>
+            <ons-button modifier="large" id="btn-save-network" style="margin: 16px 0;">設定を保存</ons-button>
+        </ons-list-item>
+        
+        <ons-list-item>
+            <ons-button modifier="large--quiet" id="btn-test-network" style="margin: 0 0 16px 0;">通信テスト (0000-00送信)</ons-button>
+        </ons-list-item>
+    </ons-list>
+
+    <style>
+        #input-server-ip,
+        #input-server-port {
+            width: 100%;
+            text-align: right;
+        }
+    </style>
+</ons-page>
