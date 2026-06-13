@@ -1,0 +1,22 @@
+<ons-page id="newsongs-page">
+    <ons-toolbar>
+        <div class="left"><ons-back-button>戻る</ons-back-button></div>
+        <div class="center" id="newsongs-page-title">最新配信曲</div>
+        <div class="right">
+            <ons-toolbar-button class="btn-goto-top" id="btn-goto-top-newsongs">
+                <ons-icon icon="md-home"></ons-icon> TOP
+            </ons-toolbar-button>
+        </div>
+    </ons-toolbar>
+
+    <div style="padding: 10px; background-color: var(--card-bg);">
+        <ons-segment id="newsongs-segment" style="width: 100%;" active-index="0">
+            <button>今月</button>
+            <button>前月</button>
+            <button>前々月</button>
+        </ons-segment>
+    </div>
+
+    <!-- リストが表示されるエリア -->
+    <ons-list id="newsongs-list"></ons-list>
+</ons-page>

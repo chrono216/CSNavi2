@@ -49,6 +49,9 @@
             <ons-toolbar>
                 <div class="center">ChronoSystem Navi</div>
                 <div class="right">
+                    <ons-toolbar-button id="db-update-button" style="color: #8e8e93;">
+                        <ons-icon icon="fa-sync"></ons-icon>
+                    </ons-toolbar-button>
                     <ons-toolbar-button id="btn-settings">
                         <ons-icon icon="fa-cog"></ons-icon>
                     </ons-toolbar-button>
@@ -57,7 +60,6 @@
             
             <div class="home-container">
                 <!-- セクション1: メイン検索 -->
-                <div class="home-section-title">さがす</div>
                 <div class="home-grid-main">
                     <div class="home-card search-card" data-search-type="song_title">
                         <div class="card-icon"><ons-icon icon="fa-music"></ons-icon></div>
@@ -74,8 +76,22 @@
                 </div>
 
                 <div class="home-grid-sub">
-                    <!-- 2段目: 分類系 -->
-                    <div class="home-card sub-card color-genre" data-list-type="genre">
+                    <!-- 2段目: 新規機能系 -->
+                    <div class="home-card sub-card color-latest" id="btn-latest">
+                        <div class="card-icon-small"><ons-icon icon="fa-compact-disc"></ons-icon></div>
+                        <div class="card-label-small">最新配信曲</div>
+                    </div>
+                    <div class="home-card sub-card color-cs" id="btn-favorite">
+                        <div class="card-icon-small"><ons-icon icon="fa-scroll"></ons-icon></div>
+                        <div class="card-label-small">CSセレクト</div>
+                    </div>
+                    <div class="home-card sub-card color-type" data-list-type="music_type">
+                        <div class="card-icon-small"><ons-icon icon="fa-book-open"></ons-icon></div>
+                        <div class="card-label-small">曲タイプ</div>
+                    </div>
+
+                    <!-- 3段目: 分類系 -->
+                    <div class="home-card sub-card color-genre" id="btn-genre-new">
                         <div class="card-icon-small"><ons-icon icon="fa-tags"></ons-icon></div>
                         <div class="card-label-small">ジャンル</div>
                     </div>
@@ -88,12 +104,12 @@
                         <div class="card-label-small">発売年</div>
                     </div>
 
-                    <!-- 3段目: ツール・番号系 -->
+                    <!-- 4段目: ツール・番号系 -->
                     <div class="home-card sub-card color-history" id="btn-history">
                         <div class="card-icon-small"><ons-icon icon="fa-history"></ons-icon></div>
                         <div class="card-label-small">履歴</div>
                     </div>
-                    <div class="home-card sub-card color-favorite" id="btn-favorite">
+                    <div class="home-card sub-card color-favorite" id="btn-favorite-new">
                         <div class="card-icon-small"><ons-icon icon="fa-star"></ons-icon></div>
                         <div class="card-label-small">お気に入り</div>
                     </div>
@@ -101,14 +117,6 @@
                         <div class="card-icon-small"><ons-icon icon="fa-list-ol"></ons-icon></div>
                         <div class="card-label-small">選曲番号</div>
                     </div>
-                </div>
-
-                <!-- フッター情報 -->
-                <div class="home-footer">
-                    <div id="app-info-display">読込中...</div>
-                    <ons-button modifier="quiet" id="db-update-button" style="font-size: 12px;">
-                        <ons-icon icon="fa-sync"></ons-icon> DB更新
-                    </ons-button>
                 </div>
             </div>
         </ons-page>

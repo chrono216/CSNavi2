@@ -46,19 +46,28 @@
             <div class="left"><ons-icon icon="fa-download" style="color: #007aff;"></ons-icon></div>
             <div class="center">差分ファイル強制再受信</div>
         </ons-list-item>
+        <ons-list-item modifier="chevron" tappable id="btn-upload-logs">
+            <div class="left"><ons-icon icon="fa-cloud-upload-alt" style="color: #007aff;"></ons-icon></div>
+            <div class="center">各種ログアップロード</div>
+        </ons-list-item>
         <ons-list-item modifier="chevron" tappable id="btn-error-log">
             <div class="left"><ons-icon icon="fa-exclamation-triangle" style="color: #ff3b30;"></ons-icon></div>
             <div class="center">エラー曲ログを確認</div>
         </ons-list-item>
         <ons-list-item modifier="chevron" tappable id="btn-clear-history">
-            <div class="left"><ons-icon icon="md-delete" style="color: #ff3b30;"></ons-icon></div>
+            <div class="left"><ons-icon icon="fa-trash-alt" style="color: #ff3b30;"></ons-icon></div>
             <div class="center">予約履歴をクリア</div>
+        </ons-list-item>
+        <ons-list-item modifier="chevron" tappable id="btn-clear-new-favorites">
+            <div class="left"><ons-icon icon="fa-trash-alt" style="color: #ff3b30;"></ons-icon></div>
+            <div class="center">お気に入りリスト初期化</div>
         </ons-list-item>
     </ons-list>
 
     <!-- バージョン情報表示エリア -->
     <div
         style="text-align: center; color: #8e8e93; font-size: 11px; margin-top: 24px; padding-bottom: 24px; line-height: 1.6;">
+        <div id="app-info-display" style="margin-bottom: 8px;">読込中...</div>
         <span id="btn-release-note"
             style="color: var(--primary-color); text-decoration: underline; cursor: pointer; font-size: 13px;">NaviVersion
             <span id="version-display">2.0.2</span></span> <!-- ←ここにバージョン番号 -->

@@ -100,11 +100,64 @@ const App = {
         }
     },
 
+    // ▼▼▼ 新お気に入り管理モジュール ▼▼▼
+    NewFavorites: {
+        data: [],
+
+        load: function () {
+            const saved = localStorage.getItem('csnavi_new_favorites');
+            this.data = saved ? JSON.parse(saved) : [];
+            return this.data;
+        },
+        save: function () {
+            localStorage.setItem('csnavi_new_favorites', JSON.stringify(this.data));
+        },
+        add: function (song) {
+            const entry = {
+                request_number: song.request_number,
+                title: song.title || "不明な楽曲",
+                artist: song.artist || "",
+                type_code: song.type_code || "01",
+                timestamp: Date.now()
+            };
+            // 既に登録済みなら削除して先頭に追加
+            this.data = this.data.filter(item => item.request_number !== entry.request_number);
+            this.data.unshift(entry);
+            this.save();
+        },
+        remove: function (request_number) {
+            this.data = this.data.filter(item => item.request_number !== request_number);
+            this.save();
+        },
+        clear: function () {
+            this.data = [];
+            this.save();
+        }
+    },
+
     Data: {
         songs: [],
         models: {}, // 機種ごとの説明文データを格納
-        genres: {}, // ジャンルごとの説明文データを格納
-        favorites: [], // お気に入りのrequest_number配列
+        musicTypes: {}, // 曲タイプごとの説明文データを格納
+        genres: [
+            { id: '02', name: '本人映像', type: 'artist_filter', filterCodes: ['02', '03', '08', '10'] },
+            { id: '03', name: 'LIVE映像', type: 'artist_filter', filterCodes: ['03'] },
+            { id: '10', name: 'LIVE歌唱', type: 'artist_filter', filterCodes: ['10'] },
+            { id: '04', name: 'アニメ映像', type: 'anime_title', filterCodes: ['04'] },
+            { id: '11', name: 'アニソン', type: 'anime_title', filterCodes: null },
+            { id: '22', name: '合成音声楽曲', type: 'direct_keyword', keyword: 'VOCALOID' },
+            { id: '12', name: 'VOCALOID 初音ミク', type: 'direct_keyword', keyword: '初音ミク' },
+            { id: '13', name: 'VOCALOID 巡音ルカ', type: 'direct_keyword', keyword: '巡音ルカ' },
+            { id: '14', name: 'VOCALOID 鏡音リン', type: 'direct_keyword', keyword: '鏡音リン' },
+            { id: '15', name: 'VOCALOID 鏡音レン', type: 'direct_keyword', keyword: '鏡音レン' },
+            { id: '16', name: 'VOCALOID 結月ゆかり', type: 'direct_keyword', keyword: '結月ゆかり' },
+            { id: '17', name: 'VOCALOID IA', type: 'direct_keyword', keyword: 'IA' },
+            { id: '18', name: 'VOCALOID Megpoid', type: 'direct_keyword', keyword: 'GUMI' },
+            { id: '19', name: 'VOCALOID flower', type: 'direct_keyword', keyword: 'flower' },
+            { id: '20', name: 'UTAU 重音テト', type: 'direct_keyword', keyword: '重音テト' },
+            { id: '21', name: 'CeVIO AI 可不', type: 'direct_keyword', keyword: '可不' }
+        ],
+        csSelect: [],
         isInitialized: false,
         lastUpdateDate: "--",
         version: "v2.0.2",
@@ -154,31 +207,31 @@ const App = {
                 .then(data => { this.models = data; })
                 .catch(err => { console.warn('models.json load failed', err); });
 
-            const pGenres = fetch('csv/genre.json')
+            const pMusicTypes = fetch('csv/musictype.json')
                 .then(res => res.json())
-                .then(data => { this.genres = data; })
-                .catch(err => { console.warn('genre.json load failed', err); });
+                .then(data => { this.musicTypes = data; })
+                .catch(err => { console.warn('musictype.json load failed', err); });
 
-            const pFavorites = fetch('csv/favorites.json')
+            const pCsSelect = fetch('csv/csselect.json')
                 .then(res => res.json())
                 .then(data => {
                     if (Array.isArray(data)) {
-                        this.favorites = data;
+                        this.csSelect = data;
                     } else if (data && Array.isArray(data.data)) {
-                        this.favorites = data.data;
+                        this.csSelect = data.data;
                     } else {
-                        this.favorites = [];
+                        this.csSelect = [];
                     }
                 })
-                .catch(err => { console.warn('favorites.json load failed', err); });
+                .catch(err => { console.warn('csselect.json load failed', err); });
 
-            return Promise.all([pCsv, pModels, pGenres, pFavorites]).then(() => {
+            return Promise.all([pCsv, pModels, pMusicTypes, pCsSelect]).then(() => {
                 this.isInitialized = true;
                 this.lastUpdateDate = "2026/01/29";
-                console.log(`DB Loaded: ${this.songs.length} songs. Models Loaded: ${Object.keys(this.models).length}. Genres Loaded: ${Object.keys(this.genres).length}. Favorites Loaded: ${this.favorites.length}`);
+                console.log(`DB Loaded: ${this.songs.length} songs. Models Loaded: ${Object.keys(this.models).length}. MusicTypes Loaded: ${Object.keys(this.musicTypes).length}. CSSelect Loaded: ${this.csSelect.length}`);
                 App.UI.updateFooterInfo();
                 App.UI.hideLoading();
-                ons.notification.toast('準備完了', { timeout: 1000 });
+                ons.notification.toast(`準備完了 Rel.${this.lastUpdateDate}`, { timeout: 2000 });
             }).catch(err => {
                 App.UI.handleError(err);
             });
@@ -333,6 +386,7 @@ const App = {
             else if (pid === 'list-select-page') setupListSelectPage(page);
             else if (pid === 'settings-page') this.setupSettingsPage(page);
             else if (pid === 'releasenote-page') this.setupReleaseNotePage(page);
+            else if (pid === 'newsongs-page') setupNewSongsPage(page);
 
             // 「TOPへ」ボタンの共通処理
             const topBtn = page.querySelector('.btn-goto-top');
@@ -363,7 +417,16 @@ const App = {
             if (btnHistory) btnHistory.onclick = () => App.navigator.pushPage('list_select.html', { data: { listType: 'history' } });
 
             const btnFavorite = page.querySelector('#btn-favorite');
-            if (btnFavorite) btnFavorite.onclick = () => App.navigator.pushPage('list_select.html', { data: { listType: 'favorite' } });
+            if (btnFavorite) btnFavorite.onclick = () => App.navigator.pushPage('list_select.html', { data: { listType: 'csSelect' } });
+
+            const btnLatest = page.querySelector('#btn-latest');
+            if (btnLatest) btnLatest.onclick = () => App.navigator.pushPage('newsongs.html');
+
+            const btnGenreNew = page.querySelector('#btn-genre-new');
+            if (btnGenreNew) btnGenreNew.onclick = () => App.navigator.pushPage('list_select.html', { data: { listType: 'genre' } });
+
+            const btnFavoriteNew = page.querySelector('#btn-favorite-new');
+            if (btnFavoriteNew) btnFavoriteNew.onclick = () => App.navigator.pushPage('list_select.html', { data: { listType: 'new_favorite' } });
 
             const btnSettings = page.querySelector('#btn-settings');
             if (btnSettings) btnSettings.onclick = () => App.navigator.pushPage('settings.html');
@@ -376,15 +439,6 @@ const App = {
                         callback: (i) => { if (i === 1) { App.Data.isInitialized = false; App.Data.init(); } }
                     });
                 };
-            }
-
-            const infoDisplay = page.querySelector('#app-info-display');
-            if (infoDisplay) {
-                if (App.Data.isInitialized) {
-                    infoDisplay.innerHTML = `楽曲数: ${App.Data.songs.length} 件 / 更新: ${App.Data.lastUpdateDate}`;
-                } else {
-                    infoDisplay.innerHTML = `楽曲数: --- 件 / 更新: --`;
-                }
             }
 
             const numBtn = page.querySelector('#btn-number-search');
@@ -436,6 +490,8 @@ const App = {
                 }
             }
 
+            if (App.Data.isInitialized) App.UI.updateFooterInfo();
+
             const btnForceUpdate = page.querySelector('#btn-force-update');
             if (btnForceUpdate) {
                 btnForceUpdate.onclick = () => {
@@ -460,6 +516,28 @@ const App = {
                             }
                         }
                     });
+                };
+            }
+
+            const btnClearNewFav = page.querySelector('#btn-clear-new-favorites');
+            if (btnClearNewFav) {
+                btnClearNewFav.onclick = () => {
+                    ons.notification.confirm({
+                        message: 'お気に入りリストをすべて消去しますか？',
+                        callback: (idx) => {
+                            if (idx === 1) {
+                                App.NewFavorites.clear();
+                                ons.notification.toast('お気に入りリストを初期化しました', { timeout: 1500 });
+                            }
+                        }
+                    });
+                };
+            }
+
+            const btnUploadLogs = page.querySelector('#btn-upload-logs');
+            if (btnUploadLogs) {
+                btnUploadLogs.onclick = () => {
+                    ons.notification.alert('この機能は未実装です(履歴ログ、エラー楽曲ログ、お気に入りリストログをセンターに送信します)');
                 };
             }
         },
@@ -516,6 +594,7 @@ document.addEventListener('DOMContentLoaded', () => {
     App.Settings.load();
     App.History.load(); // 履歴の読み込みを追加
     App.ErrorLog.load(); // エラーログの読み込み
+    App.NewFavorites.load(); // 新お気に入りの読み込み
     App.navigator = document.getElementById('myNavigator');
     App.navigator.addEventListener('postpush', (e) => App.UI.setupPage(e.enterPage));
 });
@@ -829,7 +908,13 @@ function setupResultsPage(page) {
                         </ons-list-item>
                     `);
                     item.onclick = () => {
-                        const songs = App.Data.songs.filter(s => s.artist === res);
+                        let songs = App.Data.songs.filter(s => s.artist === res);
+                        // もしジャンルフィルタ（本人映像など）が渡されていれば絞り込み
+                        if (page.data.genreFilter && page.data.genreFilter.filterCodes) {
+                            songs = songs.filter(s => page.data.genreFilter.filterCodes.includes(s.type_code));
+                        }
+                        if (App.Settings.data.isLiteMode) songs = songs.filter(s => s.lite !== "1");
+                        
                         // 選択された歌手の楽曲も同様にソート
                         songs.sort((a, b) => {
                             const kanaA = a.title_kana || '';
@@ -1018,10 +1103,27 @@ function setupDetailsPage(page) {
         </table>
         
         <div class="details-reservation-container">
+            <ons-button id="btn-add-new-favorite" style="background-color: #ff3b30; margin-bottom: 10px;">お気に入り登録</ons-button>
             <ons-button id="reservation-button">予約送信</ons-button>
         </div>
     `;
     container.innerHTML = html;
+
+    // お気に入り登録ボタンの処理
+    const btnAddFav = page.querySelector('#btn-add-new-favorite');
+    if (btnAddFav) {
+        btnAddFav.onclick = () => {
+            ons.notification.confirm({
+                message: 'お気に入りに登録しますか？',
+                callback: function(idx) {
+                    if (idx === 1) {
+                        App.NewFavorites.add(song);
+                        ons.notification.toast('お気に入りに登録しました', { timeout: 1500 });
+                    }
+                }
+            });
+        };
+    }
 
     // 予約ボタンの処理
     page.querySelector('#reservation-button').onclick = () => {
@@ -1334,14 +1436,133 @@ function setupListSelectPage(page) {
                 };
             }
         }
-    } else if (type === 'favorite') {
+    } else if (type === 'new_favorite') {
         title.textContent = 'お気に入り';
 
-        const favoriteIds = App.Data.favorites || [];
-        if (favoriteIds.length === 0) {
-            list.innerHTML = '<ons-list-item>お気に入りはありません</ons-list-item>';
+        const favData = App.NewFavorites.data;
+        const btnToggle = page.querySelector('#btn-toggle-delete-mode');
+        const btnExecute = page.querySelector('#btn-execute-delete');
+        const btnCancel = page.querySelector('#btn-cancel-delete');
+        const btnGotoTop = page.querySelector('#btn-goto-top-select');
+
+        let isDeleteMode = false;
+
+        const updateToolbar = () => {
+            if (App.NewFavorites.data.length === 0) {
+                if (btnToggle) btnToggle.style.display = 'none';
+                if (btnExecute) btnExecute.style.display = 'none';
+                if (btnCancel) btnCancel.style.display = 'none';
+                if (btnGotoTop) btnGotoTop.style.display = '';
+            } else {
+                if (btnToggle) btnToggle.style.display = isDeleteMode ? 'none' : '';
+                if (btnExecute) btnExecute.style.display = isDeleteMode ? '' : 'none';
+                if (btnCancel) btnCancel.style.display = isDeleteMode ? '' : 'none';
+                if (btnGotoTop) btnGotoTop.style.display = isDeleteMode ? 'none' : '';
+            }
+        };
+
+        if (favData.length === 0) {
+            list.innerHTML = '<ons-list-item>お気に入り登録はありません</ons-list-item>';
+            updateToolbar();
         } else {
-            favoriteIds.forEach(reqNum => {
+            favData.forEach(savedSong => {
+                const dbSong = App.Data.songs.find(s => s.request_number === savedSong.request_number);
+                const song = dbSong || savedSong;
+
+                const rawTypeCode = dbSong ? song.type_code : "99";
+                const squareTypeCode = String(rawTypeCode).padStart(3, '0');
+                const typeImg = squareTypeCode
+                    ? `<img src="img/songtype/${squareTypeCode}.png" onerror="this.style.display='none'">`
+                    : '';
+                const machImg = song.model_code
+                    ? `<img src="img/machinetype/${song.model_code}.png" onerror="this.style.display='none'">`
+                    : `<span style="font-size:10px; color:#888;">${song.request_number}</span>`;
+
+                const item = ons.createElement(`
+                    <ons-list-item tappable class="search-result-item" data-timestamp="${savedSong.timestamp}">
+                        <div class="left newfav-checkbox-container" style="display: none; margin-right: 15px;">
+                            <ons-checkbox class="newfav-checkbox" value="${savedSong.timestamp}"></ons-checkbox>
+                        </div>
+                        <div class="center list-item-container" style="width: 100%;">
+                            <div class="list-item-song-type">${typeImg}</div>
+                            <div class="list-item-main-content">
+                                <div class="list-item-title-row">
+                                    <div class="list-item-title">${song.title}</div>
+                                    <div class="list-item-machine-type">${machImg}</div>
+                                </div>
+                                ${song.subtitle ? `<div class="list-item-subtitle">${song.subtitle}</div>` : ''}
+                                <div class="list-item-artist">${song.artist}</div>
+                            </div>
+                        </div>
+                    </ons-list-item>
+                `);
+
+                item.onclick = (e) => {
+                    if (isDeleteMode) {
+                        if (e.target.tagName.toLowerCase() !== 'ons-checkbox' && e.target.tagName.toLowerCase() !== 'input') {
+                            const checkbox = item.querySelector('ons-checkbox');
+                            if (checkbox) checkbox.checked = !checkbox.checked;
+                        }
+                    } else {
+                        App.navigator.pushPage('details.html', { data: { songId: song.request_number } });
+                    }
+                };
+                list.appendChild(item);
+            });
+            updateToolbar();
+
+            if (btnToggle) {
+                btnToggle.onclick = () => {
+                    isDeleteMode = true;
+                    updateToolbar();
+                    list.querySelectorAll('.newfav-checkbox-container').forEach(el => el.style.display = '');
+                };
+            }
+
+            if (btnCancel) {
+                btnCancel.onclick = () => {
+                    isDeleteMode = false;
+                    updateToolbar();
+                    list.querySelectorAll('.newfav-checkbox-container').forEach(el => {
+                        el.style.display = 'none';
+                        const cb = el.querySelector('ons-checkbox');
+                        if (cb) cb.checked = false;
+                    });
+                };
+            }
+
+            if (btnExecute) {
+                btnExecute.onclick = () => {
+                    const checkboxes = Array.from(list.querySelectorAll('.newfav-checkbox'));
+                    const selectedTimestamps = checkboxes.filter(cb => cb.checked).map(cb => parseInt(cb.value, 10));
+
+                    if (selectedTimestamps.length === 0) {
+                        ons.notification.alert('削除する楽曲を選択してください');
+                        return;
+                    }
+
+                    ons.notification.confirm({
+                        message: '選択した楽曲をお気に入りから削除しますか？',
+                        callback: (idx) => {
+                            if (idx === 1) {
+                                App.NewFavorites.data = App.NewFavorites.data.filter(log => !selectedTimestamps.includes(log.timestamp));
+                                App.NewFavorites.save();
+                                ons.notification.toast('削除しました', { timeout: 1500 });
+                                setupListSelectPage(page);
+                            }
+                        }
+                    });
+                };
+            }
+        }
+    } else if (type === 'csSelect') {
+        title.textContent = 'CSセレクト';
+
+        const csSelectIds = App.Data.csSelect || [];
+        if (csSelectIds.length === 0) {
+            list.innerHTML = '<ons-list-item>CSセレクトの登録楽曲はありません</ons-list-item>';
+        } else {
+            csSelectIds.forEach(reqNum => {
                 const song = App.Data.songs.find(s => s.request_number === reqNum);
                 if (!song) return; // DBにない場合はスキップ
 
@@ -1375,21 +1596,110 @@ function setupListSelectPage(page) {
                 list.appendChild(item);
             });
         }
-    } else if (type === 'genre' || type === 'song_type') {
+    } else if (type === 'genre') {
         title.textContent = 'ジャンル選択';
+        list.style.display = 'block';
+
+        App.Data.genres.forEach(g => {
+            // g.descriptionがない場合は、とりあえずg.nameを表示
+            const description = g.description || g.name;
+            
+            const item = ons.createElement(`
+                <ons-list-item tappable class="machine-select-item" style="padding: 5px 0; min-height: 50px;">
+                    <div class="left-section" style="height: auto;">
+                        <img src="img/genreico/${g.id}.png" class="machine-list-img" onerror="this.style.display='none'">
+                    </div>
+                    <div class="right-section" style="display: flex; align-items: center;">
+                        <div class="machine-description" style="font-size: 16px; font-weight: bold; line-height: 1.2;">${description}</div>
+                    </div>
+                </ons-list-item>
+            `);
+            item.onclick = () => {
+                if (g.type === 'artist_filter') {
+                    // 対象となる楽曲を持つアーティスト一覧を抽出
+                    const artists = new Set();
+                    App.Data.songs.forEach(s => {
+                        if (g.filterCodes.includes(s.type_code)) {
+                            if (s.artist) artists.add(s.artist);
+                        }
+                    });
+                    const artistList = Array.from(artists).sort();
+                    App.navigator.pushPage('results.html', { 
+                        data: { 
+                            searchResults: artistList, 
+                            searchQuery: g.name,
+                            genreFilter: g // ★絞り込み情報を渡す
+                        } 
+                    });
+                } else if (g.type === 'anime_title') {
+                    // アニメタイトル一覧へ遷移
+                    App.navigator.pushPage('list_select.html', { data: { listType: 'anime_title', genreFilter: g } });
+                } else if (g.type === 'direct_keyword') {
+                    // remarks2等から直接抽出
+                    let res = App.Data.songs.filter(s => s.remarks2 && s.remarks2.includes(g.keyword));
+                    if (App.Settings.data.isLiteMode) res = res.filter(s => s.lite !== "1");
+                    App.navigator.pushPage('results.html', { 
+                        data: { 
+                            searchResults: res, 
+                            searchQuery: g.name 
+                        } 
+                    });
+                }
+            };
+            list.appendChild(item);
+        });
+
+    } else if (type === 'anime_title') {
+        const g = page.data.genreFilter;
+        title.textContent = g.name;
+        list.style.display = 'block';
+
+        list.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">読み込み中...</div>';
+        fetch('csv/animetitle.json')
+            .then(res => res.json())
+            .then(data => {
+                list.innerHTML = '';
+                if (!Array.isArray(data) || data.length === 0) {
+                    list.innerHTML = '<ons-list-item>アニメタイトルが登録されていません</ons-list-item>';
+                    return;
+                }
+                data.forEach(animeTitle => {
+                    const item = ons.createElement(`
+                        <ons-list-item tappable>
+                            <div class="center" style="font-weight:bold;">${animeTitle}</div>
+                        </ons-list-item>
+                    `);
+                    item.onclick = () => {
+                        let res = App.Data.songs.filter(s => s.remarks1 === animeTitle);
+                        if (g.filterCodes) {
+                            res = res.filter(s => g.filterCodes.includes(s.type_code));
+                        }
+                        if (App.Settings.data.isLiteMode) res = res.filter(s => s.lite !== "1");
+                        App.navigator.pushPage('results.html', { data: { searchResults: res, searchQuery: animeTitle } });
+                    };
+                    list.appendChild(item);
+                });
+            })
+            .catch(err => {
+                console.warn('Failed to load animetitle.json', err);
+                list.innerHTML = '<ons-list-item style="color:red;">データの読み込みに失敗しました</ons-list-item>';
+            });
+
+    } else if (type === 'music_type') {
+        title.textContent = '曲タイプ選択';
         list.style.display = 'block'; // 機種別と同様にリスト形式に
 
         const codes = [...new Set(App.Data.songs.map(s => s.genre_code).filter(Boolean))].sort();
         codes.forEach(c => {
-            const genreInfo = App.Data.genres[c];
-            const description = (genreInfo && genreInfo.description) ? genreInfo.description : "このジャンルの説明文は準備中です。";
-            const genreName = (genreInfo && genreInfo.name) ? genreInfo.name : `ジャンル ${c}`;
+            const typeInfo = App.Data.musicTypes[c];
+            const description = (typeInfo && typeInfo.description) ? typeInfo.description : "このタイプの説明文は準備中です。";
+            const typeName = (typeInfo && typeInfo.name) ? typeInfo.name : `タイプ ${c}`;
 
             const item = ons.createElement(`
                 <ons-list-item tappable class="machine-select-item">
                     <div class="left-section" style="flex-direction: column; height: auto; min-height: 80px;">
-                        <img src="img/genretype/${c}.png" class="machine-list-img" onerror="this.style.display='none'">
-                        <div style="font-weight:bold; font-size:12px; text-align:center; margin-top:4px;">${genreName}</div>
+                        <img src="img/musictype/${c}.png" class="machine-list-img" onerror="this.style.display='none'">
+                        <div style="font-weight:bold; font-size:12px; text-align:center; margin-top:4px;">${typeName}</div>
                     </div>
                     <div class="right-section">
                         <div class="machine-description">${description}</div>
@@ -1399,7 +1709,7 @@ function setupListSelectPage(page) {
             item.onclick = () => {
                 let res = App.Data.songs.filter(s => s.genre_code == c);
                 if (App.Settings.data.isLiteMode) res = res.filter(s => s.lite !== "1");
-                App.navigator.pushPage('results.html', { data: { searchResults: res, searchQuery: `ジャンル:${genreName}` } });
+                App.navigator.pushPage('results.html', { data: { searchResults: res, searchQuery: c } });
             };
             list.appendChild(item);
         });
@@ -1431,6 +1741,77 @@ function setupListSelectPage(page) {
         });
     }
 }
-// force update
-// End of file cleanup
-// forced update
+
+function setupNewSongsPage(page) {
+    const list = page.querySelector('#newsongs-list');
+    const segment = page.querySelector('#newsongs-segment');
+    if (!list || !segment) return;
+
+    const files = ['newsong01.json', 'newsong02.json', 'newsong03.json'];
+
+    const loadNewSongs = (index) => {
+        list.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">読み込み中...</div>';
+        const file = 'csv/' + files[index];
+        fetch(file)
+            .then(res => res.json())
+            .then(data => {
+                list.innerHTML = '';
+                let ids = [];
+                if (Array.isArray(data)) {
+                    ids = data;
+                } else if (data && Array.isArray(data.data)) {
+                    ids = data.data;
+                }
+
+                if (ids.length === 0) {
+                    list.innerHTML = '<ons-list-item>この月の最新配信曲はありません</ons-list-item>';
+                    return;
+                }
+
+                ids.forEach(reqNum => {
+                    const song = App.Data.songs.find(s => s.request_number === reqNum);
+                    if (!song) return;
+
+                    const rawTypeCode = song.type_code || "99";
+                    const squareTypeCode = String(rawTypeCode).padStart(3, '0');
+                    const typeImg = squareTypeCode
+                        ? `<img src="img/songtype/${squareTypeCode}.png" onerror="this.style.display='none'">`
+                        : '';
+                    const machImg = song.model_code
+                        ? `<img src="img/machinetype/${song.model_code}.png" onerror="this.style.display='none'">`
+                        : `<span style="font-size:10px; color:#888;">${song.request_number}</span>`;
+
+                    const item = ons.createElement(`
+                        <ons-list-item tappable class="search-result-item">
+                            <div class="list-item-container">
+                                <div class="list-item-song-type">${typeImg}</div>
+                                <div class="list-item-main-content">
+                                    <div class="list-item-title-row">
+                                        <div class="list-item-title">${song.title}</div>
+                                        <div class="list-item-machine-type">${machImg}</div>
+                                    </div>
+                                    ${song.subtitle ? `<div class="list-item-subtitle">${song.subtitle}</div>` : ''}
+                                    <div class="list-item-artist">${song.artist}</div>
+                                </div>
+                            </div>
+                        </ons-list-item>
+                    `);
+                    item.onclick = () => {
+                        App.navigator.pushPage('details.html', { data: { songId: song.request_number } });
+                    };
+                    list.appendChild(item);
+                });
+            })
+            .catch(err => {
+                console.warn('Failed to load new songs', err);
+                list.innerHTML = '<ons-list-item style="color:red;">データの読み込みに失敗しました</ons-list-item>';
+            });
+    };
+
+    segment.addEventListener('postchange', (e) => {
+        loadNewSongs(e.index);
+    });
+
+    // 初回ロード
+    loadNewSongs(0);
+}
