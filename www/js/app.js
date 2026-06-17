@@ -1102,9 +1102,9 @@ function setupDetailsPage(page) {
             </tr>
         </table>
         
-        <div class="details-reservation-container">
-            <ons-button id="btn-add-new-favorite" style="background-color: #ff3b30; margin-bottom: 10px;">お気に入り登録</ons-button>
-            <ons-button id="reservation-button">予約送信</ons-button>
+        <div class="details-reservation-container" style="display: flex; gap: 10px; justify-content: space-between;">
+            <ons-button id="btn-add-new-favorite" style="background-color: #ff3b30; flex: 1; text-align: center;">お気に入り登録</ons-button>
+            <ons-button id="reservation-button" style="flex: 1; text-align: center;">予約送信</ons-button>
         </div>
     `;
     container.innerHTML = html;
