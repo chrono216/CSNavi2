@@ -59,7 +59,8 @@
             </ons-toolbar>
             
             <div class="home-container">
-                <!-- セクション1: メイン検索 -->
+                <div class="home-left-column">
+                    <!-- セクション1: メイン検索 -->
                 <div class="home-grid-main">
                     <div class="home-card search-card" data-search-type="song_title">
                         <div class="card-icon"><ons-icon icon="fa-music"></ons-icon></div>
@@ -117,6 +118,13 @@
                         <div class="card-icon-small"><ons-icon icon="fa-list-ol"></ons-icon></div>
                         <div class="card-label-small">選曲番号</div>
                     </div>
+                    </div>
+                </div>
+                <!-- 横画面タブレット時のみ表示されるバナーエリア -->
+                <div class="banner-column">
+                    <img src="img/banner/banner01.png" class="top-banner" id="btn-banner01">
+                    <img src="img/banner/banner02.png" class="top-banner" id="btn-banner02">
+                    <img src="img/banner/banner03.png" class="top-banner" id="btn-banner03">
                 </div>
             </div>
         </ons-page>

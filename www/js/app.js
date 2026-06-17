@@ -22,11 +22,19 @@ const App = {
                 App.Network.config.ip = this.data.serverIp;
                 App.Network.config.port = this.data.serverPort;
             }
+            this.apply();
         },
         save: function () {
             localStorage.setItem('csnavi_settings', JSON.stringify(this.data));
             App.Network.config.ip = this.data.serverIp;
             App.Network.config.port = this.data.serverPort;
+        },
+        apply: function() {
+            if (this.data.isTabletMode) {
+                document.body.classList.add('tablet-mode');
+            } else {
+                document.body.classList.remove('tablet-mode');
+            }
         }
     },
 
@@ -158,6 +166,9 @@ const App = {
             { id: '21', name: 'CeVIO AI 可不', type: 'direct_keyword', keyword: '可不' }
         ],
         csSelect: [],
+        banner01: [],
+        banner02: [],
+        banner03: [],
         isInitialized: false,
         lastUpdateDate: "--",
         version: "v2.0.2",
@@ -212,20 +223,25 @@ const App = {
                 .then(data => { this.musicTypes = data; })
                 .catch(err => { console.warn('musictype.json load failed', err); });
 
-            const pCsSelect = fetch('csv/csselect.json')
+            const fetchList = (filename, propName) => fetch(`csv/${filename}.json`)
                 .then(res => res.json())
                 .then(data => {
                     if (Array.isArray(data)) {
-                        this.csSelect = data;
+                        this[propName] = data;
                     } else if (data && Array.isArray(data.data)) {
-                        this.csSelect = data.data;
+                        this[propName] = data.data;
                     } else {
-                        this.csSelect = [];
+                        this[propName] = [];
                     }
                 })
-                .catch(err => { console.warn('csselect.json load failed', err); });
+                .catch(err => { console.warn(`${filename}.json load failed`, err); this[propName] = []; });
 
-            return Promise.all([pCsv, pModels, pMusicTypes, pCsSelect]).then(() => {
+            const pCsSelect = fetchList('csselect', 'csSelect');
+            const pB1 = fetchList('banner01', 'banner01');
+            const pB2 = fetchList('banner02', 'banner02');
+            const pB3 = fetchList('banner03', 'banner03');
+
+            return Promise.all([pCsv, pModels, pMusicTypes, pCsSelect, pB1, pB2, pB3]).then(() => {
                 this.isInitialized = true;
                 this.lastUpdateDate = "2026/01/29";
                 console.log(`DB Loaded: ${this.songs.length} songs. Models Loaded: ${Object.keys(this.models).length}. MusicTypes Loaded: ${Object.keys(this.musicTypes).length}. CSSelect Loaded: ${this.csSelect.length}`);
@@ -428,6 +444,15 @@ const App = {
             const btnFavoriteNew = page.querySelector('#btn-favorite-new');
             if (btnFavoriteNew) btnFavoriteNew.onclick = () => App.navigator.pushPage('list_select.html', { data: { listType: 'new_favorite' } });
 
+            const btnBanner01 = page.querySelector('#btn-banner01');
+            if (btnBanner01) btnBanner01.onclick = () => App.navigator.pushPage('list_select.html', { data: { listType: 'banner01' } });
+
+            const btnBanner02 = page.querySelector('#btn-banner02');
+            if (btnBanner02) btnBanner02.onclick = () => App.navigator.pushPage('list_select.html', { data: { listType: 'banner02' } });
+
+            const btnBanner03 = page.querySelector('#btn-banner03');
+            if (btnBanner03) btnBanner03.onclick = () => App.navigator.pushPage('list_select.html', { data: { listType: 'banner03' } });
+
             const btnSettings = page.querySelector('#btn-settings');
             if (btnSettings) btnSettings.onclick = () => App.navigator.pushPage('settings.html');
 
@@ -457,6 +482,7 @@ const App = {
             sw.onchange = function() {
                 App.Settings.data.isTabletMode = sw.checked;
                 App.Settings.save();
+                App.Settings.apply();
                 ons.notification.toast(`タブレットモードを${sw.checked ? 'ON' : 'OFF'}にしました`, { timeout: 1000 });
             };
 
@@ -1555,12 +1581,16 @@ function setupListSelectPage(page) {
                 };
             }
         }
-    } else if (type === 'csSelect') {
-        title.textContent = 'CSセレクト';
+    } else if (type === 'csSelect' || type.startsWith('banner')) {
+        let titleText = 'CSセレクト';
+        if (type === 'banner01') titleText = '特集プレイリスト1';
+        if (type === 'banner02') titleText = '特集プレイリスト2';
+        if (type === 'banner03') titleText = '特集プレイリスト3';
+        title.textContent = titleText;
 
-        const csSelectIds = App.Data.csSelect || [];
+        const csSelectIds = App.Data[type] || [];
         if (csSelectIds.length === 0) {
-            list.innerHTML = '<ons-list-item>CSセレクトの登録楽曲はありません</ons-list-item>';
+            list.innerHTML = `<ons-list-item>${titleText}の登録楽曲はありません</ons-list-item>`;
         } else {
             csSelectIds.forEach(reqNum => {
                 const song = App.Data.songs.find(s => s.request_number === reqNum);
@@ -1815,3 +1845,6 @@ function setupNewSongsPage(page) {
     // 初回ロード
     loadNewSongs(0);
 }
+
+// Force reload cache
+ 
