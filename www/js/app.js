@@ -163,12 +163,16 @@ const App = {
             { id: '18', name: 'VOCALOID Megpoid', type: 'direct_keyword', keyword: 'GUMI' },
             { id: '19', name: 'VOCALOID flower', type: 'direct_keyword', keyword: 'flower' },
             { id: '20', name: 'UTAU 重音テト', type: 'direct_keyword', keyword: '重音テト' },
-            { id: '21', name: 'CeVIO AI 可不', type: 'direct_keyword', keyword: '可不' }
+            { id: '21', name: 'CeVIO AI 可不', type: 'direct_keyword', keyword: '可不' },
+            { id: '24', name: 'グラカラ', type: 'json_grouped_list', file: 'gurakara' },
+            { id: '25', name: 'ウマ娘ゲーム映像', type: 'json_grouped_list', file: 'umamusume' }
         ],
         csSelect: [],
         banner01: [],
         banner02: [],
         banner03: [],
+        gurakara: [],
+        umamusume: [],
         isInitialized: false,
         lastUpdateDate: "--",
         version: "v2.0.2",
@@ -240,8 +244,10 @@ const App = {
             const pB1 = fetchList('banner01', 'banner01');
             const pB2 = fetchList('banner02', 'banner02');
             const pB3 = fetchList('banner03', 'banner03');
+            const pGura = fetchList('gurakara', 'gurakara');
+            const pUma = fetchList('umamusume', 'umamusume');
 
-            return Promise.all([pCsv, pModels, pMusicTypes, pCsSelect, pB1, pB2, pB3]).then(() => {
+            return Promise.all([pCsv, pModels, pMusicTypes, pCsSelect, pB1, pB2, pB3, pGura, pUma]).then(() => {
                 this.isInitialized = true;
                 this.lastUpdateDate = "2026/01/29";
                 console.log(`DB Loaded: ${this.songs.length} songs. Models Loaded: ${Object.keys(this.models).length}. MusicTypes Loaded: ${Object.keys(this.musicTypes).length}. CSSelect Loaded: ${this.csSelect.length}`);
@@ -1664,6 +1670,8 @@ function setupListSelectPage(page) {
                 } else if (g.type === 'anime_title') {
                     // アニメタイトル一覧へ遷移
                     App.navigator.pushPage('list_select.html', { data: { listType: 'anime_title', genreFilter: g } });
+                } else if (g.type === 'json_grouped_list') {
+                    App.navigator.pushPage('list_select.html', { data: { listType: 'json_grouped_list', genreFilter: g } });
                 } else if (g.type === 'direct_keyword') {
                     // remarks2等から直接抽出
                     let res = App.Data.songs.filter(s => s.remarks2 && s.remarks2.includes(g.keyword));
@@ -1679,6 +1687,69 @@ function setupListSelectPage(page) {
             list.appendChild(item);
         });
 
+    } else if (type === 'json_grouped_list') {
+        const g = page.data.genreFilter;
+        title.textContent = g.name;
+        list.style.display = 'block';
+
+        const groupedData = App.Data[g.file] || [];
+        
+        if (groupedData.length === 0) {
+            list.innerHTML = `<ons-list-item>${g.name}の登録楽曲はありません</ons-list-item>`;
+        } else {
+            groupedData.forEach(group => {
+                // アイドル名の行（非タップ、アイコン付き）
+                const iconFileName = group.icoID || group.iconId || 'unknown';
+                const headerItem = ons.createElement(`
+                    <ons-list-item class="machine-select-item" style="padding: 5px 0; min-height: 50px; background-color: var(--page-bg); border-bottom: 1px solid var(--border-color);">
+                        <div class="left-section" style="height: auto; width: 50px; justify-content: center;">
+                            <img src="img/ico/${iconFileName}.png" class="machine-list-img" style="width:40px; height:auto; border-radius:4px;" onerror="this.style.display='none'">
+                        </div>
+                        <div class="right-section" style="display: flex; align-items: center; padding-left: 10px;">
+                            <div class="machine-description" style="font-size: 16px; font-weight: bold; line-height: 1.2;">${group.groupName}</div>
+                        </div>
+                    </ons-list-item>
+                `);
+                list.appendChild(headerItem);
+
+                // 楽曲リストの行
+                if (group.songs && Array.isArray(group.songs)) {
+                    group.songs.forEach(reqNum => {
+                        const song = App.Data.songs.find(s => s.request_number === reqNum);
+                        if (!song) return;
+
+                        const rawTypeCode = song.type_code || "99";
+                        const squareTypeCode = String(rawTypeCode).padStart(3, '0');
+                        const typeImg = squareTypeCode
+                            ? `<img src="img/songtype/${squareTypeCode}.png" onerror="this.style.display='none'">`
+                            : '';
+                        const machImg = song.model_code
+                            ? `<img src="img/machinetype/${song.model_code}.png" onerror="this.style.display='none'">`
+                            : `<span style="font-size:10px; color:#888;">${song.request_number}</span>`;
+
+                        const item = ons.createElement(`
+                            <ons-list-item tappable class="search-result-item" style="padding-left: 15px;">
+                                <div class="list-item-container">
+                                    <div class="list-item-song-type">${typeImg}</div>
+                                    <div class="list-item-main-content">
+                                        <div class="list-item-title-row">
+                                            <div class="list-item-title" style="font-size: 14px;">～ ${song.title}</div>
+                                            <div class="list-item-machine-type">${machImg}</div>
+                                        </div>
+                                        ${song.subtitle ? `<div class="list-item-subtitle">${song.subtitle}</div>` : ''}
+                                        <div class="list-item-artist">${song.artist}</div>
+                                    </div>
+                                </div>
+                            </ons-list-item>
+                        `);
+                        item.onclick = () => {
+                            App.navigator.pushPage('details.html', { data: { songId: song.request_number } });
+                        };
+                        list.appendChild(item);
+                    });
+                }
+            });
+        }
     } else if (type === 'anime_title') {
         const g = page.data.genreFilter;
         title.textContent = g.name;
