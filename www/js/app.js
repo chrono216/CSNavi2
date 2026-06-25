@@ -152,6 +152,8 @@ const App = {
             { id: '03', name: 'LIVE映像', type: 'artist_filter', filterCodes: ['03'] },
             { id: '10', name: 'LIVE歌唱', type: 'artist_filter', filterCodes: ['10'] },
             { id: '04', name: 'アニメ映像', type: 'anime_title', filterCodes: ['04'] },
+            { id: '26', name: 'VTuber', type: 'json_grouped_list', file: 'vtuber' },
+            { id: '25', name: 'ウマ娘ゲーム映像', type: 'json_grouped_list', file: 'umamusume' },
             { id: '11', name: 'アニソン', type: 'anime_title', filterCodes: null },
             { id: '22', name: '合成音声楽曲', type: 'direct_keyword', keyword: 'VOCALOID' },
             { id: '12', name: 'VOCALOID 初音ミク', type: 'direct_keyword', keyword: '初音ミク' },
@@ -164,8 +166,7 @@ const App = {
             { id: '19', name: 'VOCALOID flower', type: 'direct_keyword', keyword: 'flower' },
             { id: '20', name: 'UTAU 重音テト', type: 'direct_keyword', keyword: '重音テト' },
             { id: '21', name: 'CeVIO AI 可不', type: 'direct_keyword', keyword: '可不' },
-            { id: '24', name: 'グラカラ', type: 'json_grouped_list', file: 'gurakara' },
-            { id: '25', name: 'ウマ娘ゲーム映像', type: 'json_grouped_list', file: 'umamusume' }
+            { id: '24', name: 'グラカラ', type: 'json_grouped_list', file: 'gurakara' }
         ],
         csSelect: [],
         banner01: [],
@@ -173,6 +174,7 @@ const App = {
         banner03: [],
         gurakara: [],
         umamusume: [],
+        vtuber: [],
         isInitialized: false,
         lastUpdateDate: "--",
         version: "v2.0.2",
@@ -246,8 +248,9 @@ const App = {
             const pB3 = fetchList('banner03', 'banner03');
             const pGura = fetchList('gurakara', 'gurakara');
             const pUma = fetchList('umamusume', 'umamusume');
+            const pVtuber = fetchList('vtuber', 'vtuber');
 
-            return Promise.all([pCsv, pModels, pMusicTypes, pCsSelect, pB1, pB2, pB3, pGura, pUma]).then(() => {
+            return Promise.all([pCsv, pModels, pMusicTypes, pCsSelect, pB1, pB2, pB3, pGura, pUma, pVtuber]).then(() => {
                 this.isInitialized = true;
                 this.lastUpdateDate = "2026/01/29";
                 console.log(`DB Loaded: ${this.songs.length} songs. Models Loaded: ${Object.keys(this.models).length}. MusicTypes Loaded: ${Object.keys(this.musicTypes).length}. CSSelect Loaded: ${this.csSelect.length}`);
